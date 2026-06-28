@@ -1,0 +1,141 @@
+###############################################################################
+#                            ModDynamicAH – default                           #
+#   rename this file to mod_dynamic_ah.conf before first launch / rebuild     #
+###############################################################################
+
+############################
+#  Core toggles / loop     #
+############################
+ModDynamicAH.Enabled              = 1         # 1 = seller/loop on, 0 = off
+ModDynamicAH.DryRun               = 0         # 1 = simulate only
+ModDynamicAH.Loop.Enabled         = 1         # auto-plan/execute each Interval
+ModDynamicAH.Interval.Minutes     = 600        # minutes between cycles
+
+############################
+#  Seller owners (GUIDs)   #
+#  Run `.dah setup` once—  #
+#  copy printed GUIDs here #
+############################
+ModDynamicAH.Owner.Alliance       = 1016
+ModDynamicAH.Owner.Horde          = 1017
+ModDynamicAH.Owner.Neutral        = 1018
+
+############################
+#  Universal price floor   #
+############################
+ModDynamicAH.MinPriceCopper                 = 10000     # 1 g
+ModDynamicAH.Vendor.MinMarkup               = 2.0       # 200 % over vendor buy
+ModDynamicAH.Vendor.ConsiderBuyPriceAsSold  = 1
+ModDynamicAH.NeverBuyAboveVendorBuyPrice    = 1
+
+############################
+#  Economy-driven floor    #
+############################
+ModDynamicAH.Economy.GoldPerQuest           = 2.50      # avg gold a quest yields
+
+#   Minimum quests required to afford **one stack** from each family.
+ModDynamicAH.Economy.QuestsPerFamily.Herb   = 10
+ModDynamicAH.Economy.QuestsPerFamily.Ore    = 12
+ModDynamicAH.Economy.QuestsPerFamily.Bar    = 15
+ModDynamicAH.Economy.QuestsPerFamily.Cloth  = 10
+ModDynamicAH.Economy.QuestsPerFamily.Leather= 14
+ModDynamicAH.Economy.QuestsPerFamily.Dust   = 12
+ModDynamicAH.Economy.QuestsPerFamily.Essence= 12
+ModDynamicAH.Economy.QuestsPerFamily.Shard  = 20
+ModDynamicAH.Economy.QuestsPerFamily.Stone  = 10
+ModDynamicAH.Economy.QuestsPerFamily.Meat   = 8
+ModDynamicAH.Economy.QuestsPerFamily.Fish   = 8
+ModDynamicAH.Economy.QuestsPerFamily.Gem    = 18
+ModDynamicAH.Economy.QuestsPerFamily.Potion = 6
+ModDynamicAH.Economy.QuestsPerFamily.Ink    = 10
+ModDynamicAH.Economy.QuestsPerFamily.Pigment= 10
+ModDynamicAH.Economy.QuestsPerFamily.Other  = 5
+
+############################
+#  Context planner         #
+############################
+# When enabled, the seller inspects the professions/skill of players currently online and lists
+# only the material tiers relevant to them (deduped per faction), so listings track the
+# population's level progression. If nobody with professions is online, a light baseline of the
+# core gathering families is listed so the AH never goes empty.
+ModDynamicAH.Context.Enabled                = 1
+ModDynamicAH.Debug.ContextLogs              = 0          # 1 = verbose
+
+############################
+#  Random planner          #
+############################
+ModDynamicAH.Random.MaxPerCycle             = 25
+ModDynamicAH.BlockTrashAndCommon            = 1
+ModDynamicAH.AllowQuality.Poor              = 0
+ModDynamicAH.AllowQuality.Normal            = 0
+ModDynamicAH.AllowQuality.Uncommon          = 1
+ModDynamicAH.AllowQuality.Rare              = 1
+ModDynamicAH.AllowQuality.Epic              = 0
+ModDynamicAH.AllowQuality.Legendary         = 0
+
+############################
+#  Stack sizes (per family)#
+############################
+ModDynamicAH.Stack.Default          = 20
+ModDynamicAH.Stack.Dust             = 20
+ModDynamicAH.Stack.Essence          = 10
+ModDynamicAH.Stack.Shard            = 1
+ModDynamicAH.Stack.Pigment          = 20
+ModDynamicAH.Stack.Ink              = 10
+# Gems are always listed as singles (players buy one to cut), regardless of this section.
+# keep others at Default unless needed
+
+############################
+#  Caps (anti-flood)       #
+############################
+ModDynamicAH.Cap.Enabled                 = 1
+ModDynamicAH.Cap.TotalPerCycle           = 150
+ModDynamicAH.Cap.House.Alliance          = 80
+ModDynamicAH.Cap.House.Horde             = 80
+ModDynamicAH.Cap.House.Neutral           = 120
+ModDynamicAH.Cap.Family.Herb             = 60
+ModDynamicAH.Cap.Family.Ore              = 50
+ModDynamicAH.Cap.Family.Bar              = 50
+ModDynamicAH.Cap.Family.Cloth            = 60
+ModDynamicAH.Cap.Family.Leather          = 40
+ModDynamicAH.Cap.Family.Dust             = 40
+ModDynamicAH.Cap.Family.Essence          = 40
+ModDynamicAH.Cap.Family.Shard            = 25
+ModDynamicAH.Cap.Family.Stone            = 40
+ModDynamicAH.Cap.Family.Meat             = 20
+ModDynamicAH.Cap.Family.Fish             = 20
+ModDynamicAH.Cap.Family.Gem              = 30
+ModDynamicAH.Cap.Family.Pigment          = 30
+ModDynamicAH.Cap.Family.Ink              = 20
+ModDynamicAH.Cap.Family.Elemental        = 30
+ModDynamicAH.Cap.Family.Other            = 80
+
+############################
+#  Buyer engine            #
+############################
+# The buyer absorbs under-priced player listings: it pays the seller (mail), removes the
+# listing, and destroys the item, acting as a price floor + gold faucet. The bot spends REAL
+# gold from its seller character's wallet, so fund it first with `.dah buy fund <gold> all`.
+# When the wallet runs dry it stops buying until refilled. Honors DryRun (set above) too.
+ModDynamicAH.Buy.Enabled                 = 1
+# Per-cycle planning cap (gold). Caps how much a single planning cycle will commit to buys.
+ModDynamicAH.Buy.PerCycleBudgetGold      = 100
+ModDynamicAH.Buy.MinMargin               = 15       # % cheaper than fair
+ModDynamicAH.Buy.PerItemPerCycleCap      = 2
+ModDynamicAH.Buy.MaxScanRows             = 2000
+ModDynamicAH.Buy.BlockTrashAndCommon     = 1
+
+############################
+#  Price multipliers (%)   #
+############################
+ModDynamicAH.PriceMul.Dust      = 100
+ModDynamicAH.PriceMul.Essence   = 125
+ModDynamicAH.PriceMul.Shard     = 200
+ModDynamicAH.PriceMul.Elemental = 300
+ModDynamicAH.PriceMul.RareRaw   = 300
+
+############################
+#  Allow-list              #
+############################
+# CSV of ItemIDs that bypass vendor / quality filters.
+ModDynamicAH.WhiteAllowList     = 10938

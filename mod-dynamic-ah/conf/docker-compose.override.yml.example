@@ -1,0 +1,74 @@
+services:
+  worldserver:
+    # ────────────────────────── ModDynamicAH starter kit ─────────────────────────
+    environment:
+      # ── Core toggles ───────────────────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_ENABLED:              "1"     # turn module on
+      AC_MOD_DYNAMIC_AH_DRYRUN:               "0"     # 0 = live, 1 = simulate only
+      AC_MOD_DYNAMIC_AH_LOOP_ENABLED:         "1"     # auto plan/apply every interval
+      AC_MOD_DYNAMIC_AH_INTERVAL_MIN:     "600"    # loop tick
+
+      # ── Seller characters (GUIDs) ──────────────────────────────────────────────
+      #  Run `.dah setup`, copy printed GUIDs here, then `docker compose restart`.
+      AC_MOD_DYNAMIC_AH_OWNER_ALLIANCE:       ""
+      AC_MOD_DYNAMIC_AH_OWNER_HORDE:          ""
+      AC_MOD_DYNAMIC_AH_OWNER_NEUTRAL:        ""
+
+      # ── Universal price floor & vendor rules ───────────────────────────────────
+      AC_MOD_DYNAMIC_AH_MIN_PRICE_COPPER:     "10000"  # 1g absolute floor
+      AC_MOD_DYNAMIC_AH_VENDOR_MINMARKUP:     "0.25"   # 25 % above vendor BuyPrice
+      AC_MOD_DYNAMIC_AH_VENDOR_CONSIDER_BUYPRICEASSOLD: "1"
+      AC_MOD_DYNAMIC_AH_NEVER_BUY_ABOVE_VENDOR_BUY_PRICE: "1"
+
+      # ── Context planner knobs ──────────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_CONTEXT_ENABLED:      "1"
+      AC_MOD_DYNAMIC_AH_CONTEXT_MAXPERTICKPERPLAYER: "3"   # dust + essence + shard
+      AC_MOD_DYNAMIC_AH_CONTEXT_SKIPVENDORMATS:      "1"   # skip unlimited vendor mats
+
+      # ── Random planner knobs ───────────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_RANDOM_MAXPERCYCLE:   "25"     # mix of trade goods & gear
+      AC_MOD_DYNAMIC_AH_BLOCKTRASHANDCOMMON:  "1"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_POOR:   "0"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_NORMAL: "0"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_UNCOMMON:"1"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_RARE:   "1"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_EPIC:   "1"
+      AC_MOD_DYNAMIC_AH_ALLOW_QUALITY_LEGENDARY:"0"
+
+      # ── Stack sizes (default & key families) ───────────────────────────────────
+      AC_MOD_DYNAMIC_AH_STACK_DEFAULT:        "20"
+      AC_MOD_DYNAMIC_AH_STACK_DUST:           "20"
+      AC_MOD_DYNAMIC_AH_STACK_ESSENCE:        "10"
+      AC_MOD_DYNAMIC_AH_STACK_SHARD:          "1"
+
+      # ── Caps (anti-flood) ──────────────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_CAP_ENABLED:          "1"
+      AC_MOD_DYNAMIC_AH_CAP_TOTALPERCYCLE:    "150"
+      AC_MOD_DYNAMIC_AH_CAP_FAMILY_Essence:   "40"
+      AC_MOD_DYNAMIC_AH_CAP_FAMILY_Shard:     "25"
+      AC_MOD_DYNAMIC_AH_CAP_FAMILY_Herb:      "60"
+      AC_MOD_DYNAMIC_AH_CAP_FAMILY_Other:     "80"
+
+      # ── Buyer engine ───────────────────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_BUY_ENABLED:          "1"
+      AC_MOD_DYNAMIC_AH_BUY_PERCYCLEBUDGETGOLD: "100"  # 100 g per cycle
+      AC_MOD_DYNAMIC_AH_BUY_MINMARGIN:        "15"     # needs ≥15 % discount
+      AC_MOD_DYNAMIC_AH_BUY_PERITEMPERCYCLECAP:"2"
+      AC_MOD_DYNAMIC_AH_BUY_MAXSCANROWS:      "2000"
+      AC_MOD_DYNAMIC_AH_BUY_BLOCKTRASHANDCOMMON: "1"
+
+      # ── Price multipliers (percent) ────────────────────────────────────────────
+      AC_MOD_DYNAMIC_AH_PRICEMUL_DUST:        "100"   # baseline
+      AC_MOD_DYNAMIC_AH_PRICEMUL_ESSENCE:     "125"   # +25 %
+      AC_MOD_DYNAMIC_AH_PRICEMUL_SHARD:       "200"   # ×2
+      AC_MOD_DYNAMIC_AH_PRICEMUL_ELEMENTAL:   "300"   # ×3
+      AC_MOD_DYNAMIC_AH_PRICEMUL_RARERAW:     "300"   # ×3
+
+      # ── Allow-list (IDs bypass vendor/uncommon filters) ────────────────────────
+      AC_MOD_DYNAMIC_AH_WHITEALLOWLIST:       "10938"   # Lesser Magic Essence
+
+    # Optional: ensure worldserver sees our custom log level
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
