@@ -31,7 +31,17 @@ See [`conf/mod_custom_items.conf.dist`](conf/mod_custom_items.conf.dist).
 | ------- | ------- | ----------- |
 | `CustomItems.Enable` | `1` | Master switch. When `0`, the loader is skipped, the wire-rewrite hook becomes a no-op, and tooltip substitution is disabled. Existing tables are left in place. |
 
+## Core changes required
+
+This module needs `ScriptMgr` hooks that stock AzerothCore lacks — it **will not compile**
+without them. Apply [`core-patches/acore-core-hooks.patch`](../core-patches/) to your core
+checkout. This module's slice adds: `WorldScript::OnAfterLoadItemTemplates`,
+`AllItemScript::OnItemBuildValuesUpdate` / `OnItemQueryTemplate` (+ the
+`RewriteItemFieldOnEgress` egress helper and the `Object::BuildValuesUpdate` call site),
+the `ItemHandler` query substitution, and `ObjectMgr::GetMutableItemTemplateStore()` /
+`RebuildItemTemplateFastStore()`. See [core-patches/](../core-patches/) for details.
+
 ## Installation
 
 See the [repository README](../README.md) for how to junction/symlink this module into
-your AzerothCore `modules/` directory, then re-run CMake and rebuild.
+your AzerothCore `modules/` directory and apply the core patch, then re-run CMake and rebuild.

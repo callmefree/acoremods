@@ -41,7 +41,16 @@ commented list. All numbers are tuning targets — edit, reload worldserver, tun
 | `.zones testweather \| testflavor \| testclear` | GM | Preview/clear weather & flavor effects. |
 | `.zones event list \| fire <...> \| end` | GM | Manage dynamic world events. |
 
+## Core changes required
+
+This module needs a `ScriptMgr` hook that stock AzerothCore lacks — it **will not compile**
+without it. Apply [`core-patches/acore-core-hooks.patch`](../core-patches/) to your core
+checkout. This module's slice adds `PlayerScript::OnPlayerQuestComputeMoney` (+ the
+`Player::RewardQuest` call site). It also seeds rows into the
+[mod-custom-items](../mod-custom-items) tables for class-based drops, so the custom-items
+core hooks must be present too. See [core-patches/](../core-patches/) for details.
+
 ## Installation
 
 See the [repository README](../README.md) for how to junction/symlink this module into
-your AzerothCore `modules/` directory, then re-run CMake and rebuild.
+your AzerothCore `modules/` directory and apply the core patch, then re-run CMake and rebuild.

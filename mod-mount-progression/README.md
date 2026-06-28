@@ -33,7 +33,16 @@ full, commented list. All numbers are tuning targets — edit, reload worldserve
 | `.mount addxp <...>` | GM | Add XP to a mount. |
 | `.mount setlevel <...>` | GM | Set a mount's level. |
 
+## Core changes required
+
+This module needs `ScriptMgr` hooks that stock AzerothCore lacks — it **will not compile**
+without them. Apply [`core-patches/acore-core-hooks.patch`](../core-patches/) to your core
+checkout. This module's slice adds: `WorldScript::OnAfterLoadDBCStores` (inject custom
+mount spells before `SpellMgr` builds) and `UnitScript::OnAuraBuildUpdatePacket` (+ the
+`SpellAuras::BuildUpdatePacket` call site that rewrites the displayed aura spell ID).
+See [core-patches/](../core-patches/) for details.
+
 ## Installation
 
 See the [repository README](../README.md) for how to junction/symlink this module into
-your AzerothCore `modules/` directory, then re-run CMake and rebuild.
+your AzerothCore `modules/` directory and apply the core patch, then re-run CMake and rebuild.

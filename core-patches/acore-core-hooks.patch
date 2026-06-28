@@ -1,0 +1,406 @@
+diff --git a/src/server/game/Entities/Object/Object.cpp b/src/server/game/Entities/Object/Object.cpp
+index 9cd58f197..763b36a5a 100644
+--- a/src/server/game/Entities/Object/Object.cpp
++++ b/src/server/game/Entities/Object/Object.cpp
+@@ -501,7 +501,7 @@ void Object::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* targe
+                 ((updateType == UPDATETYPE_VALUES ? _changesMask.GetBit(index) : m_uint32Values[index]) && (flags[index] & visibleFlag)))
+         {
+             updateMask.SetBit(index);
+-            fieldBuffer << m_uint32Values[index];
++            fieldBuffer << sScriptMgr->RewriteItemFieldOnEgress(this, index, m_uint32Values[index]);  // mod-custom-items (was: m_uint32Values[index])
+         }
+     }
+ 
+diff --git a/src/server/game/Entities/Player/PlayerQuest.cpp b/src/server/game/Entities/Player/PlayerQuest.cpp
+index edfe48c9a..28565d53b 100644
+--- a/src/server/game/Entities/Player/PlayerQuest.cpp
++++ b/src/server/game/Entities/Player/PlayerQuest.cpp
+@@ -764,6 +764,8 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver,
+         moneyRew += rewOrReqMoney;
+     }
+ 
++    sScriptMgr->OnPlayerQuestComputeMoney(this, quest, moneyRew);
++
+     if (moneyRew)
+     {
+         ModifyMoney(moneyRew);
+diff --git a/src/server/game/Globals/ObjectMgr.cpp b/src/server/game/Globals/ObjectMgr.cpp
+index f1e100bba..386eaf5b3 100644
+--- a/src/server/game/Globals/ObjectMgr.cpp
++++ b/src/server/game/Globals/ObjectMgr.cpp
+@@ -3853,6 +3853,24 @@ ItemTemplate const* ObjectMgr::GetItemTemplate(uint32 entry)
+     return entry < _itemTemplateStoreFast.size() ? _itemTemplateStoreFast[entry] : nullptr;
+ }
+ 
++// mod-custom-items: rebuild _itemTemplateStoreFast from _itemTemplateStore.
++// Called from module OnAfterLoadItemTemplates overrides after custom item
++// injection so GetItemTemplate(custom_entry) resolves through the fast
++// path. Mirrors the pussywizard block at the tail of LoadItemTemplates.
++void ObjectMgr::RebuildItemTemplateFastStore()
++{
++    uint32 max = 0;
++    for (auto const& kv : _itemTemplateStore)
++        if (kv.first > max)
++            max = kv.first;
++    if (!max)
++        return;
++    _itemTemplateStoreFast.clear();
++    _itemTemplateStoreFast.resize(max + 1, nullptr);
++    for (auto& kv : _itemTemplateStore)
++        _itemTemplateStoreFast[kv.first] = &kv.second;
++}
++
+ void ObjectMgr::LoadItemSetNameLocales()
+ {
+     uint32 oldMSTime = getMSTime();
+diff --git a/src/server/game/Globals/ObjectMgr.h b/src/server/game/Globals/ObjectMgr.h
+index 8a4fbbef2..6e4f80f93 100644
+--- a/src/server/game/Globals/ObjectMgr.h
++++ b/src/server/game/Globals/ObjectMgr.h
+@@ -782,6 +782,13 @@ public:
+     ItemTemplate const* GetItemTemplate(uint32 entry);
+     [[nodiscard]] ItemTemplateContainer const* GetItemTemplateStore() const { return &_itemTemplateStore; }
+     [[nodiscard]] std::vector<ItemTemplate*> const* GetItemTemplateStoreFast() const { return &_itemTemplateStoreFast; }
++    // mod-custom-items: mutable accessor used by OnAfterLoadItemTemplates
++    // hook overrides to inject module-owned custom item entries.
++    ItemTemplateContainer* GetMutableItemTemplateStore() { return &_itemTemplateStore; }
++    // mod-custom-items: rebuild the entry-indexed fast lookup vector
++    // after custom items have been injected; otherwise GetItemTemplate
++    // returns nullptr for entries past the original max.
++    void RebuildItemTemplateFastStore();
+ 
+     uint32 GetModelForTotem(SummonSlot totemSlot, Races race) const;
+ 
+diff --git a/src/server/game/Handlers/ItemHandler.cpp b/src/server/game/Handlers/ItemHandler.cpp
+index c2cc245b6..316965d1a 100644
+--- a/src/server/game/Handlers/ItemHandler.cpp
++++ b/src/server/game/Handlers/ItemHandler.cpp
+@@ -395,6 +395,7 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPacket& recvData)
+     LOG_DEBUG("network.opcode", "STORAGE: Item Query = {}", item);
+ 
+     ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item);
++    sScriptMgr->OnItemQueryTemplate(GetPlayer(), item, pProto);  // mod-custom-items
+     if (pProto)
+     {
+         std::string Name = pProto->Name1;
+@@ -411,7 +412,7 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPacket& recvData)
+         }
+         // guess size
+         WorldPacket queryData(SMSG_ITEM_QUERY_SINGLE_RESPONSE, 600);
+-        queryData << pProto->ItemId;
++        queryData << item;  // mod-custom-items (was: pProto->ItemId) — keep wire ItemId == queried entry even when OnItemQueryTemplate substitutes pProto
+         queryData << pProto->Class;
+         queryData << pProto->SubClass;
+         queryData << pProto->SoundOverrideSubclass;
+diff --git a/src/server/game/Scripting/ScriptDefines/AllItemScript.cpp b/src/server/game/Scripting/ScriptDefines/AllItemScript.cpp
+index ecc51c5cd..e45d55126 100644
+--- a/src/server/game/Scripting/ScriptDefines/AllItemScript.cpp
++++ b/src/server/game/Scripting/ScriptDefines/AllItemScript.cpp
+@@ -142,6 +142,58 @@ void ScriptMgr::OnGossipSelectCode(Player* player, Item* item, uint32 sender, ui
+     }
+ }
+ 
++// mod-custom-items: rewrite the on-wire entry for items in update packets.
++void ScriptMgr::OnItemBuildValuesUpdate(Item const* item, uint32& entry)
++{
++    ExecuteScript<AllItemScript>([&](AllItemScript* script)
++    {
++        script->OnItemBuildValuesUpdate(item, entry);
++    });
++}
++
++// mod-custom-items: substitute the ItemTemplate served on
++// SMSG_ITEM_QUERY_SINGLE_RESPONSE based on the querier's session.
++void ScriptMgr::OnItemQueryTemplate(Player const* querier, uint32 wireEntry, ItemTemplate const*& proto)
++{
++    ExecuteScript<AllItemScript>([&](AllItemScript* script)
++    {
++        script->OnItemQueryTemplate(querier, wireEntry, proto);
++    });
++}
++
++// mod-custom-items: encapsulated per-field egress dispatch. Lives here
++// rather than as a member of Object so the Object class stays untouched
++// at the .h level and Object::BuildValuesUpdate only sees a one-line
++// call-site modification. The two index ranges this routes through
++// OnItemBuildValuesUpdate are:
++//   * OBJECT_FIELD_ENTRY (offset 3) on Item-typed objects — drives the
++//     bag-slot icon and on-cursor display lookups via Item.dbc.
++//   * PLAYER_VISIBLE_ITEM_N_ENTRYID (N=1..19) on Player-typed objects
++//     — drives the equipped-slot icon on the paper doll AND the
++//     equipped 3D model rendered to other players' clients. Each
++//     visible-item slot is two fields wide (entry + enchantment); the
++//     `(index - PLAYER_VISIBLE_ITEM_1_ENTRYID) % 2u == 0` check picks
++//     the entry field only.
++// Default behavior with no module override is identical to returning
++// rawValue unchanged.
++uint32 ScriptMgr::RewriteItemFieldOnEgress(Object const* obj, uint16 index, uint32 rawValue)
++{
++    if (!obj)
++        return rawValue;
++    if (index == OBJECT_FIELD_ENTRY && obj->isType(TYPEMASK_ITEM))
++    {
++        OnItemBuildValuesUpdate(static_cast<Item const*>(obj), rawValue);
++    }
++    else if (obj->isType(TYPEMASK_PLAYER)
++             && index >= PLAYER_VISIBLE_ITEM_1_ENTRYID
++             && index <= PLAYER_VISIBLE_ITEM_19_ENTRYID
++             && ((index - PLAYER_VISIBLE_ITEM_1_ENTRYID) % 2u) == 0)
++    {
++        OnItemBuildValuesUpdate(nullptr, rawValue);
++    }
++    return rawValue;
++}
++
+ AllItemScript::AllItemScript(const char* name) :
+     ScriptObject(name)
+ {
+diff --git a/src/server/game/Scripting/ScriptDefines/AllItemScript.h b/src/server/game/Scripting/ScriptDefines/AllItemScript.h
+index c28cf6acb..52c05b124 100644
+--- a/src/server/game/Scripting/ScriptDefines/AllItemScript.h
++++ b/src/server/game/Scripting/ScriptDefines/AllItemScript.h
+@@ -43,6 +43,24 @@ public:
+ 
+     // Called when a player selects an option in an item gossip window
+     virtual void OnItemGossipSelectCode(Player* /*player*/, Item* /*item*/, uint32 /*sender*/, uint32 /*action*/, const char* /*code*/) { }
++
++    // Fires while building OBJECT_FIELD_ENTRY in an Item's update packet.
++    // Overriding rewrites only the entry ID emitted to the client (used
++    // for bag-icon / equip / 3D render lookups against client-side
++    // Item.dbc), not the server-side item identity.
++    //   mod-custom-items
++    virtual void OnItemBuildValuesUpdate(Item const* /*item*/, uint32& /*entry*/) { }
++
++    // Fires inside HandleItemQuerySingleOpcode after GetItemTemplate(),
++    // before the SMSG_ITEM_QUERY_SINGLE_RESPONSE is serialized. Lets a
++    // module substitute a different ItemTemplate based on the querier's
++    // session/inventory state — the path that lets the client render a
++    // donor's icon/3D model (via OBJECT_FIELD_ENTRY rewrite) AND the
++    // custom item's name/description/quality in the tooltip. The wire
++    // ItemId field stays equal to the queried entry regardless of the
++    // substitution.
++    //   mod-custom-items
++    virtual void OnItemQueryTemplate(Player const* /*querier*/, uint32 /*wireEntry*/, ItemTemplate const*& /*proto*/) { }
+ };
+ 
+ #endif
+diff --git a/src/server/game/Scripting/ScriptDefines/PlayerScript.cpp b/src/server/game/Scripting/ScriptDefines/PlayerScript.cpp
+index 09e295f77..632131031 100644
+--- a/src/server/game/Scripting/ScriptDefines/PlayerScript.cpp
++++ b/src/server/game/Scripting/ScriptDefines/PlayerScript.cpp
+@@ -485,6 +485,11 @@ void ScriptMgr::OnPlayerQuestComputeXP(Player* player, Quest const* quest, uint3
+     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_QUEST_COMPUTE_EXP, script->OnPlayerQuestComputeXP(player, quest, xpValue));
+ }
+ 
++void ScriptMgr::OnPlayerQuestComputeMoney(Player* player, Quest const* quest, int32& moneyRew)
++{
++    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_QUEST_COMPUTE_MONEY, script->OnPlayerQuestComputeMoney(player, quest, moneyRew));
++}
++
+ void ScriptMgr::OnPlayerBeforeStoreOrEquipNewItem(Player* player, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore)
+ {
+     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_STORE_OR_EQUIP_NEW_ITEM, script->OnPlayerBeforeStoreOrEquipNewItem(player, vendorslot, item, count, bag, slot, pProto, pVendor, crItem, bStore));
+diff --git a/src/server/game/Scripting/ScriptDefines/PlayerScript.h b/src/server/game/Scripting/ScriptDefines/PlayerScript.h
+index eb253fd70..c1d27f25c 100644
+--- a/src/server/game/Scripting/ScriptDefines/PlayerScript.h
++++ b/src/server/game/Scripting/ScriptDefines/PlayerScript.h
+@@ -112,6 +112,7 @@ enum PlayerHook
+     PLAYERHOOK_ON_BEFORE_OPEN_ITEM,
+     PLAYERHOOK_ON_BEFORE_QUEST_COMPLETE,
+     PLAYERHOOK_ON_QUEST_COMPUTE_EXP,
++    PLAYERHOOK_ON_QUEST_COMPUTE_MONEY,
+     PLAYERHOOK_ON_BEFORE_DURABILITY_REPAIR,
+     PLAYERHOOK_ON_BEFORE_BUY_ITEM_FROM_VENDOR,
+     PLAYERHOOK_ON_BEFORE_STORE_OR_EQUIP_NEW_ITEM,
+@@ -452,6 +453,11 @@ public:
+     // Called after computing the XP reward value for a quest
+     virtual void OnPlayerQuestComputeXP(Player* /*player*/, Quest const* /*quest*/, uint32& /*xpValue*/) { }
+ 
++    // Called after computing the money reward value for a quest, right
++    // before it is applied via ModifyMoney(). moneyRew is signed because
++    // quests may cost money rather than reward it.
++    virtual void OnPlayerQuestComputeMoney(Player* /*player*/, Quest const* /*quest*/, int32& /*moneyRew*/) { }
++
+     // Before durability repair action, you can even modify the discount value
+     virtual void OnPlayerBeforeDurabilityRepair(Player* /*player*/, ObjectGuid /*npcGUID*/, ObjectGuid /*itemGUID*/, float&/*discountMod*/, uint8 /*guildBank*/) { }
+ 
+diff --git a/src/server/game/Scripting/ScriptDefines/UnitScript.cpp b/src/server/game/Scripting/ScriptDefines/UnitScript.cpp
+index c36cfcd25..383b3f496 100644
+--- a/src/server/game/Scripting/ScriptDefines/UnitScript.cpp
++++ b/src/server/game/Scripting/ScriptDefines/UnitScript.cpp
+@@ -134,6 +134,12 @@ void ScriptMgr::OnUnitSetShapeshiftForm(Unit* unit, uint8 form)
+     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM, script->OnUnitSetShapeshiftForm(unit, form));
+ }
+ 
++// mod-mount-progression: lets modules rewrite the outgoing aura spell ID for display.
++void ScriptMgr::OnAuraBuildUpdatePacket(Aura const* aura, uint32& spellId)
++{
++    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_BUILD_UPDATE_PACKET, script->OnAuraBuildUpdatePacket(aura, spellId));
++}
++
+ UnitScript::UnitScript(const char* name, bool addToScripts, std::vector<uint16> enabledHooks)
+     : ScriptObject(name, UNITHOOK_END)
+ {
+diff --git a/src/server/game/Scripting/ScriptDefines/UnitScript.h b/src/server/game/Scripting/ScriptDefines/UnitScript.h
+index 046f9cc11..e5af773c1 100644
+--- a/src/server/game/Scripting/ScriptDefines/UnitScript.h
++++ b/src/server/game/Scripting/ScriptDefines/UnitScript.h
+@@ -43,6 +43,7 @@ enum UnitHook
+     UNITHOOK_ON_UNIT_ENTER_COMBAT,
+     UNITHOOK_ON_UNIT_DEATH,
+     UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM,
++    UNITHOOK_ON_AURA_BUILD_UPDATE_PACKET,  // mod-mount-progression
+     UNITHOOK_END
+ };
+ 
+@@ -108,6 +109,14 @@ public:
+     virtual void OnUnitEnterCombat(Unit* /*unit*/, Unit* /*victim*/) { }
+     virtual void OnUnitDeath(Unit* /*unit*/, Unit* /*killer*/) { }
+     virtual void OnUnitSetShapeshiftForm(Unit* /*unit*/, uint8 /*form*/) { }
++
++    // Fires while building an SMSG_AURA_UPDATE packet. The `spellId`
++    // output parameter starts as the aura's real ID; overriding it
++    // rewrites only the ID that is emitted to the client, not the
++    // server-side aura identity. Useful for pointing unknown-to-client
++    // custom spell IDs at a client-known icon/name/tooltip for display.
++    //   mod-mount-progression
++    virtual void OnAuraBuildUpdatePacket(Aura const* /*aura*/, uint32& /*spellId*/) { }
+ };
+ 
+ #endif
+diff --git a/src/server/game/Scripting/ScriptDefines/WorldScript.cpp b/src/server/game/Scripting/ScriptDefines/WorldScript.cpp
+index e5eef4675..e534cacad 100644
+--- a/src/server/game/Scripting/ScriptDefines/WorldScript.cpp
++++ b/src/server/game/Scripting/ScriptDefines/WorldScript.cpp
+@@ -84,6 +84,18 @@ void ScriptMgr::OnBeforeWorldInitialized()
+     CALL_ENABLED_HOOKS(WorldScript, WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED, script->OnBeforeWorldInitialized());
+ }
+ 
++// mod-mount-progression: inject custom spells before SpellMgr loads.
++void ScriptMgr::OnAfterLoadDBCStores()
++{
++    CALL_ENABLED_HOOKS(WorldScript, WORLDHOOK_ON_AFTER_LOAD_DBC_STORES, script->OnAfterLoadDBCStores());
++}
++
++// mod-custom-items: inject custom item templates after item_template loads.
++void ScriptMgr::OnAfterLoadItemTemplates()
++{
++    CALL_ENABLED_HOOKS(WorldScript, WORLDHOOK_ON_AFTER_LOAD_ITEM_TEMPLATES, script->OnAfterLoadItemTemplates());
++}
++
+ WorldScript::WorldScript(const char* name, std::vector<uint16> enabledHooks)
+     : ScriptObject(name, WORLDHOOK_END)
+ {
+diff --git a/src/server/game/Scripting/ScriptDefines/WorldScript.h b/src/server/game/Scripting/ScriptDefines/WorldScript.h
+index 75589426e..5415ff386 100644
+--- a/src/server/game/Scripting/ScriptDefines/WorldScript.h
++++ b/src/server/game/Scripting/ScriptDefines/WorldScript.h
+@@ -37,6 +37,8 @@ enum WorldHook
+     WORLDHOOK_ON_AFTER_UNLOAD_ALL_MAPS,
+     WORLDHOOK_ON_BEFORE_FINALIZE_PLAYER_WORLD_SESSION,
+     WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED,
++    WORLDHOOK_ON_AFTER_LOAD_DBC_STORES,  // mod-mount-progression
++    WORLDHOOK_ON_AFTER_LOAD_ITEM_TEMPLATES,  // mod-custom-items
+     WORLDHOOK_END
+ };
+ 
+@@ -92,6 +94,22 @@ public:
+      * @brief This hook runs after all scripts loading and before itialized
+      */
+     virtual void OnBeforeWorldInitialized() { }
++
++    // Fires immediately after LoadDBCStores() populates sSpellStore /
++    // sSkillLineAbilityStore / etc. from the DBC files and their
++    // *_dbc overlay tables, and before SpellMgr::LoadSpellInfoStore()
++    // builds mSpellInfoMap. Use this to inject custom spell entries
++    // from module-owned tables via DBCStorage::LoadFromDB without
++    // touching the shared spell_dbc overlay.
++    //   mod-mount-progression
++    virtual void OnAfterLoadDBCStores() { }
++
++    // Fires immediately after ObjectMgr::LoadItemTemplates() populates
++    // _itemTemplateStore from item_template, and before LoadItemSetNames().
++    // Use this to inject custom item entries from module-owned tables
++    // into the in-memory store without writing to AC-native item_template.
++    //   mod-custom-items
++    virtual void OnAfterLoadItemTemplates() { }
+ };
+ 
+ #endif
+diff --git a/src/server/game/Scripting/ScriptMgr.h b/src/server/game/Scripting/ScriptMgr.h
+index ca2b35822..f74ebfcb5 100644
+--- a/src/server/game/Scripting/ScriptMgr.h
++++ b/src/server/game/Scripting/ScriptMgr.h
+@@ -195,6 +195,8 @@ public: /* WorldScript */
+     void OnShutdown();
+     void OnBeforeWorldInitialized();
+     void OnAfterUnloadAllMaps();
++    void OnAfterLoadDBCStores();  // mod-mount-progression
++    void OnAfterLoadItemTemplates();  // mod-custom-items
+ 
+ public: /* FormulaScript */
+     void OnHonorCalculation(float& honor, uint8 level, float multiplier);
+@@ -226,6 +228,12 @@ public: /* ItemScript */
+     bool OnItemRemove(Player* player, Item* item);
+     bool OnCastItemCombatSpell(Player* player, Unit* victim, SpellInfo const* spellInfo, Item* item);
+     void OnGossipSelect(Player* player, Item* item, uint32 sender, uint32 action);
++    void OnItemBuildValuesUpdate(Item const* item, uint32& entry);  // mod-custom-items
++    void OnItemQueryTemplate(Player const* querier, uint32 wireEntry, ItemTemplate const*& proto);  // mod-custom-items
++    // mod-custom-items: per-field egress helper invoked once per emitted update field by Object::BuildValuesUpdate.
++    // Owns the decision of which fields to route through OnItemBuildValuesUpdate (item entry on Item objects,
++    // PLAYER_VISIBLE_ITEM_*_ENTRYID slots on Player objects). Keeps Object.cpp's diff at exactly one modified line.
++    uint32 RewriteItemFieldOnEgress(Object const* obj, uint16 index, uint32 rawValue);
+     void OnGossipSelectCode(Player* player, Item* item, uint32 sender, uint32 action, const char* code);
+ 
+ public: /* CreatureScript */
+@@ -388,6 +396,7 @@ public: /* PlayerScript */
+     bool OnPlayerBeforeOpenItem(Player* player, Item* item);
+     bool OnPlayerBeforeQuestComplete(Player* player, uint32 quest_id);
+     void OnPlayerQuestComputeXP(Player* player, Quest const* quest, uint32& xpValue);
++    void OnPlayerQuestComputeMoney(Player* player, Quest const* quest, int32& moneyRew);
+     void OnPlayerBeforeDurabilityRepair(Player* player, ObjectGuid npcGUID, ObjectGuid itemGUID, float& discountMod, uint8 guildBank);
+     void OnPlayerBeforeBuyItemFromVendor(Player* player, ObjectGuid vendorguid, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot);
+     void OnPlayerBeforeStoreOrEquipNewItem(Player* player, uint32 vendorslot, uint32& item, uint8 count, uint8 bag, uint8 slot, ItemTemplate const* pProto, Creature* pVendor, VendorItem const* crItem, bool bStore);
+@@ -572,6 +581,7 @@ public: /* UnitScript */
+     void OnBeforeRollMeleeOutcomeAgainst(Unit const* attacker, Unit const* victim, WeaponAttackType attType, int32& attackerMaxSkillValueForLevel, int32& victimMaxSkillValueForLevel, int32& attackerWeaponSkill, int32& victimDefenseSkill, int32& crit_chance, int32& miss_chance, int32& dodge_chance, int32& parry_chance, int32& block_chance);
+     void OnAuraApply(Unit* /*unit*/, Aura* /*aura*/);
+     void OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode mode);
++    void OnAuraBuildUpdatePacket(Aura const* aura, uint32& spellId);  // mod-mount-progression
+     bool IfNormalReaction(Unit const* unit, Unit const* target, ReputationRank& repRank);
+     bool CanSetPhaseMask(Unit const* unit, uint32 newPhaseMask, bool update);
+     bool IsCustomBuildValuesUpdate(Unit const* unit, uint8 updateType, ByteBuffer& fieldBuffer, Player const* target, uint16 index);
+diff --git a/src/server/game/Spells/Auras/SpellAuras.cpp b/src/server/game/Spells/Auras/SpellAuras.cpp
+index 3ca928b47..66a68f772 100644
+--- a/src/server/game/Spells/Auras/SpellAuras.cpp
++++ b/src/server/game/Spells/Auras/SpellAuras.cpp
+@@ -197,7 +197,9 @@ void AuraApplication::BuildUpdatePacket(ByteBuffer& data, bool remove) const
+     ASSERT(_target->GetVisibleAura(_slot));
+ 
+     Aura const* aura = GetBase();
+-    data << uint32(aura->GetId());
++    uint32 displaySpellId = aura->GetId();                                // mod-mount-progression
++    sScriptMgr->OnAuraBuildUpdatePacket(aura, displaySpellId);            // mod-mount-progression
++    data << uint32(displaySpellId);                                       // mod-mount-progression
+     uint32 flags = _flags;
+     if (aura->GetMaxDuration() > 0 && !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR5_DO_NOT_DISPLAY_DURATION))
+         flags |= AFLAG_DURATION;
+diff --git a/src/server/game/World/World.cpp b/src/server/game/World/World.cpp
+index cc951abd0..547115f49 100644
+--- a/src/server/game/World/World.cpp
++++ b/src/server/game/World/World.cpp
+@@ -378,6 +378,7 @@ void World::SetInitialWorldSettings()
+     ///- Load the DBC files
+     LOG_INFO("server.loading", "Initialize Data Stores...");
+     LoadDBCStores(_dataPath);
++    sScriptMgr->OnAfterLoadDBCStores();  // mod-mount-progression
+     DetectDBCLang();
+ 
+     // Load cinematic cameras
+@@ -520,6 +521,7 @@ void World::SetInitialWorldSettings()
+ 
+     LOG_INFO("server.loading", "Loading Items...");                         // must be after LoadRandomEnchantmentsTable and LoadPageTexts
+     sObjectMgr->LoadItemTemplates();
++    sScriptMgr->OnAfterLoadItemTemplates();  // mod-custom-items
+ 
+     LOG_INFO("server.loading", "Loading Item Set Names...");                // must be after LoadItemPrototypes
+     sObjectMgr->LoadItemSetNames();
