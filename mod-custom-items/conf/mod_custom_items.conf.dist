@@ -1,0 +1,30 @@
+[worldserver]
+
+###################################################################################################
+#    Custom Items — mod-custom-items
+#
+#    Framework for shipping custom items without a client patch. Provides:
+#      - Module-owned `custom_item_template` table (LIKE item_template + policy columns)
+#        for item rows in the reserved entry-ID window [700000, 800000).
+#      - Module-owned `custom_item_display_donors` table mapping each custom entry to
+#        a "donor" stock entry the WotLK 3.3.5a client already knows from its local
+#        Item.dbc / ItemDisplayInfo.dbc.
+#      - WorldScript::OnAfterLoadItemTemplates hook to inject custom rows into AC's
+#        _itemTemplateStore at boot.
+#      - AllItemScript::OnItemBuildValuesUpdate egress hook to rewrite OBJECT_FIELD_ENTRY
+#        on outgoing update packets to the donor entry (so client renders donor's icon /
+#        3D model from the unmodified DBCs).
+#      - AllItemScript::OnItemQueryTemplate hook to substitute the response template
+#        back to the custom row when the querying player owns one of our custom items.
+#
+#    Consumer mods (e.g. mod-terror-zones) seed rows into the two shared tables and pick
+#    sub-ranges by convention. No C++ wiring required for SQL-only consumers.
+###################################################################################################
+
+#    CustomItems.Enable
+#        Description: Master on/off switch. When 0, the OnAfterLoadItemTemplates loader
+#                     is skipped, the wire-rewrite egress hook becomes a no-op, and tooltip
+#                     query substitution is disabled. Existing tables are left in place.
+#        Default:     1
+
+CustomItems.Enable = 1

@@ -1,0 +1,34 @@
+[worldserver]
+
+###################################################################################################
+#    Living World — mod-living-world
+#
+#    Foundational state graph for the Living World Stormwind prototype. See
+#    docs/living_world_prototype.md (operational spec),
+#    docs/living_world_inspirations.md (vision),
+#    docs/living_world_state_graph_design.md (architecture).
+#
+#    Phase 1 is the only build commitment: per-guild flag storage with
+#    persistence. Phases 2–5+ are designed but not built.
+###################################################################################################
+
+#    LivingWorld.Enable
+#        Description: Master on/off switch. When 0, StateGraph::Set rejects writes
+#                     and StateGraph::Get returns default values. The module still
+#                     loads (so removal stays a structural operation, not a flip).
+#        Default:     1
+
+LivingWorld.Enable = 1
+
+#    LivingWorld.Debug
+#        Description: Verbose logging of cache loads, writes, and lookups.
+#        Default:     0
+
+LivingWorld.Debug = 0
+
+#    LivingWorld.StateGraph.LogWritesToDb
+#        Description: When 1, log every successful DB write at INFO level. Useful
+#                     for verifying persistence during prototype testing.
+#        Default:     0
+
+LivingWorld.StateGraph.LogWritesToDb = 0

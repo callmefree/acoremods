@@ -1,0 +1,20 @@
+# Runtime config (only the .conf.dist templates are tracked)
+*.conf
+!*.conf.dist
+
+# Build artifacts
+build/
+*.o
+*.obj
+*.so
+*.dll
+*.a
+*.lib
+
+# Editor / OS
+.idea/
+.vs/
+.vscode/
+*.user
+.DS_Store
+Thumbs.db

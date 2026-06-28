@@ -1,0 +1,205 @@
+[worldserver]
+
+###################################################################################################
+#    Mount Progression — mod-mount-progression
+#
+#    Per-mount XP/leveling system. Every mount a player owns has its own level and XP,
+#    earned through activities that match the mount's type. See docs/MOUNT_PROGRESSION_SPEC.md
+#    for full design.
+#
+#    All numbers here are tuning targets. Change freely, reload worldserver, tune.
+###################################################################################################
+
+#    MountProgression.Enable
+#        Description: Master on/off switch. When off, no XP is awarded and slash commands
+#                     return a "system disabled" message. Catalog still loads.
+#        Default:     1
+
+MountProgression.Enable = 1
+
+#    MountProgression.MaxLevel
+#        Description: Level cap for every mount, regardless of rarity.
+#        Default:     60
+
+MountProgression.MaxLevel = 60
+
+#
+#    XP curve — quadratic per rarity:
+#        xp_to_next(level) = XPBase.<Rarity> * level * level
+#
+#    Higher rarities take longer to cap by design. Tune these to hit spec §3 pace targets.
+#
+
+MountProgression.XPBase.Common    = 10
+MountProgression.XPBase.Uncommon  = 40
+MountProgression.XPBase.Rare      = 120
+MountProgression.XPBase.Epic      = 400
+MountProgression.XPBase.Legendary = 4000
+
+#
+#    Kill XP — flat amounts awarded to the active mount on creature kill, iff the
+#    active mount's type is `predator`. Decoupled from the server's player-XP rate
+#    multipliers (AC_RATE_XP_KILL) — these are mount-XP, not player-XP.
+#
+
+MountProgression.KillXP.Normal = 10
+MountProgression.KillXP.Elite  = 40
+MountProgression.KillXP.Boss   = 200
+
+#
+#    Anti-exploit: mounts lose eligibility for XP if the player is below this level
+#    difference relative to the victim. 0 disables. Tune if grey-kill farming appears.
+#
+
+MountProgression.KillXP.MinLevelDelta = -10
+
+#
+#    Distance XP (stamina mounts). Sampled on a 1 Hz server tick. Per-tick
+#    distance deltas exceeding MaxYardsPerTick are dropped as teleports
+#    (2x max plausible flying speed ≈ 80 yards/s).
+#
+
+MountProgression.DistanceXP.YardsPerXP      = 10
+MountProgression.DistanceXP.MaxYardsPerTick = 90
+
+#
+#    Cast XP (arcane mounts) — awarded per non-mount, non-crafting spell cast.
+#
+
+MountProgression.CastXP.PerCast = 1
+
+#
+#    Gathering / crafting XP (mechanical mounts).
+#      GatherXP.PerLoot — per loot item from a GameObject (node/chest).
+#      CraftXP.PerCraft — per cast of a spell with a CREATE_ITEM effect.
+#
+
+MountProgression.GatherXP.PerLoot  = 5
+MountProgression.CraftXP.PerCraft  = 10
+
+#
+#    Agility XP — awarded on entering a new subzone that this character has
+#    not visited yet this session.
+#
+
+MountProgression.AreaXP.PerTransition = 25
+
+#
+#    ===============================================================
+#    Slice 3 — flat stat buffs
+#    ===============================================================
+#    When a mount is the active one, the player receives a persistent
+#    carrier aura. One aura per mount type, stat per type:
+#        stamina    -> +stamina
+#        predator   -> +attack power
+#        agility    -> +agility
+#        mechanical -> +armor
+#        arcane     -> +spell power (damage) AND +healing done
+#
+
+#    MountProgression.BuffMagnitudeMode
+#        0 = spec-literal (% of class-race base stat at current level).
+#            Tiny numbers; buff is flavor, not power. Matches spec §4
+#            "hardcore players chase legendaries for effects not numbers".
+#        1 = flat-per-level (ceiling * curve_fraction, ignores base stat).
+#            Meaningful numbers; mount choice becomes an optimization lever.
+#            Default. Gear-swap-proof by construction.
+#        Default: 1
+
+MountProgression.BuffMagnitudeMode = 1
+
+#    MountProgression.BuffLevelCurve
+#        0 = linear:    magnitude = ceiling * mountLevel / MaxLevel
+#        1 = stepped:   25% at lvl 1-14, 50% at 15-29, 75% at 30-44,
+#                       100% at 45-60. Visible milestones (recommended).
+#        2 = quadratic: magnitude = ceiling * (mountLevel / MaxLevel)^2
+#        Default: 1
+
+MountProgression.BuffLevelCurve = 1
+
+#
+#    Buff ceilings (magnitude at max level when curve_fraction = 1.0).
+#    In mode 0 these are percentages of base stat; in mode 1 they are
+#    flat units. Numbers below assume mode 1.
+#
+#        Common    -> flavor tier, still perceptible
+#        Uncommon  -> noticeable
+#        Rare      -> strong, roughly trinket-proc tier
+#        Epic      -> very strong, trinket tier
+#        Legendary -> best-in-slot-adjacent, justifies the grind
+#
+
+MountProgression.BuffCeiling.Common    = 20
+MountProgression.BuffCeiling.Uncommon  = 60
+MountProgression.BuffCeiling.Rare      = 120
+MountProgression.BuffCeiling.Epic      = 200
+MountProgression.BuffCeiling.Legendary = 400
+
+#
+#    How long after logout the carrier aura is silently re-applied
+#    on login. Past this window the player must remount.
+#    Default: 1800 (30 min) per spec §5.
+#
+
+MountProgression.OfflineGraceSeconds = 1800
+
+#
+#    Whether to still emit "[Mount] Active: ..." in chat on mount cast.
+#    Once the buff-tray icon is visible this may feel redundant; set 0
+#    to silence the per-cast line.
+#    Default: 1 (keep the info feed for hardcore min-maxers).
+#
+
+MountProgression.AnnounceActiveOnCast = 1
+
+#
+#    Reserved spell IDs for the five carrier auras. Override only if
+#    80000..80004 collide with your DBC overlay. Changing these also
+#    requires re-writing the Slice 3 carrier-spell SQL migration.
+#
+
+MountProgression.CarrierSpell.Stamina    = 80000
+MountProgression.CarrierSpell.Predator   = 80001
+MountProgression.CarrierSpell.Agility    = 80002
+MountProgression.CarrierSpell.Mechanical = 80003
+MountProgression.CarrierSpell.Arcane     = 80004
+
+#
+#    Icon-donor spell IDs. The carrier aura lives server-side under the
+#    reserved IDs above, but those IDs don't exist in the client's
+#    Spell.dbc, so the client has nothing to render. To give the buff
+#    tray a real icon/name/tooltip we send the client an existing
+#    client-known spell ID for display only — the hook
+#    OnAuraBuildUpdatePacket rewrites the outgoing spell ID on the fly.
+#    The server's aura identity is unaffected; only what the client
+#    sees changes.
+#
+#    Set to 0 to skip override (buff tray will be invisible — unknown
+#    spell ID is silently dropped by the 3.3.5a client).
+#
+#    Picks are client-visible thematic spells. Donors with the
+#    SPELL_ATTR0_DO_NOT_DISPLAY flag (most "internal" / pet-scaling
+#    spells) look attractive on paper but the 3.3.5a client silently
+#    drops them from the buff tray — the scanner filters those out.
+#    BasePoints stay low so the tooltip numerical lie is small.
+#    See scanner: docs/mount-progression/tools/scan_icon_donors.py
+#
+#    Defaults:
+#        Stamina    8099  Stamina (bp=2, literal name)
+#        Predator   30848 Tracker's Ferocity (bp=9, hunter AP)
+#        Agility    8115  Agility (bp=2, literal name)
+#        Mechanical 77    Turtle's Shell (bp=0, thematic)
+#        Arcane     22418 Chaotic Focus (bp=0, thematic)
+#
+
+MountProgression.IconDonor.Stamina    = 8099
+MountProgression.IconDonor.Predator   = 30848
+MountProgression.IconDonor.Agility    = 8115
+MountProgression.IconDonor.Mechanical = 77
+MountProgression.IconDonor.Arcane     = 22418
+
+#
+#    Debug — extra logging to the `module` logger channel.
+#
+
+MountProgression.Debug = 0
