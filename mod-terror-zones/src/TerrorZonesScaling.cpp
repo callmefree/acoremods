@@ -60,30 +60,23 @@ uint8 TerrorZonesMgr::ComputeTargetLevel(uint32 zoneId) const
     uint8 tierVal = (tier >= TIER_1 && tier <= TIER_5)
         ? static_cast<uint8>(tier) : 0;
 
-    // Server-wide apex: highest level across all real-player sessions
-    // (bots excluded). Zone presence intentionally ignored — on a 2-5
-    // player server the apex player's level is what the rotation should
-    // cater to regardless of where they physically are right now. This
-    // also sidesteps the zone-id propagation race at creature spawn
-    // time (player's session zone updates lag behind grid loading,
-    // which would otherwise leave fresh spawns at the pool floor).
+    // Zone-scoped player aggregate: collect the levels of the real
+    // (non-bot) players physically IN this zone, then take the median
+    // (default) or max per TerrorZones.Scaling.PlayerLevelMetric. This
+    // is the design for a small private server — an empowered zone is
+    // tuned to the people actually standing in it, not to a server-wide
+    // apex (which on a mixed-level box would crush the low players in
+    // their own zones). When NO real player is present the result is 0,
+    // and the caller leaves mobs at their native level — an empowered
+    // but empty zone is not re-leveled to a phantom target.
     //
-    // IsInWorld() check intentionally absent: the AC teleport flow is
-    // RemoveFromWorld → load destination map (creatures spawn here,
-    // hitting OnBeforeCreatureSelectLevel) → AddToWorld. Same race on
-    // login: SetPlayer runs before AddToWorld, and cell loading can
-    // fire OnBeforeCreatureSelectLevel during the window in between.
-    // Gating on IsInWorld() rejected the teleporting/logging-in
-    // player's level, returned highest=0, and left fresh spawns at
-    // their native level even though OnAfterCreatureSelectLevel was
-    // happily applying the tier HP mult right after — producing
-    // "level 11 boar with 33k HP" in the empowered zone. WorldSession
-    // ::SetPlayer(nullptr) at logout (WorldSession.cpp:807) fires
-    // before the Player is destroyed, so a `!p` check is enough to
-    // reject genuinely-gone sessions; mid-cleanup sessions briefly
-    // counted here are harmless (their level is still real and the
-    // window is microseconds).
-    uint8 highest = 0;
+    // The freshly-spawned-during-teleport race (a creature's grid loads
+    // before the entering player's zone field is set, so this enumerates
+    // 0 players and the mob spawns native) is covered by the zone-enter
+    // rescale in OnPlayerUpdateZone, which re-runs SelectLevel for the
+    // whole zone once the player is established in it. The periodic tick
+    // rescale is a second backstop.
+    std::vector<uint8> levels;
     WorldSessionMgr::SessionMap const& sessions =
         sWorldSessionMgr->GetAllSessions();
     for (auto const& kv : sessions)
@@ -92,14 +85,23 @@ uint8 TerrorZonesMgr::ComputeTargetLevel(uint32 zoneId) const
         if (!session || session->IsBot())
             continue;
         Player* p = session->GetPlayer();
-        if (!p)
+        if (!p || !p->IsInWorld())
             continue;
-        uint8 lvl = p->GetLevel();
-        if (lvl > highest)
-            highest = lvl;
+        // A GM actively in GM mode (.gm on) is here as staff, not as a
+        // participant — don't let their level skew the zone target. A GM
+        // with .gm off counts as a normal player.
+        if (p->IsGameMaster())
+            continue;
+        if (p->GetZoneId() != zoneId)
+            continue;
+        levels.push_back(p->GetLevel());
     }
+    if (levels.empty())
+        return 0;
 
-    return ComputeTargetLevelPure(inRotation, highest,
+    uint8 agg = AggregatePlayerLevel(std::move(levels), _scalingUseMaxLevel);
+
+    return ComputeTargetLevelPure(inRotation, agg,
                                    zoneMin, tierVal,
                                    _maxPlayerLevel);
 }

@@ -1062,6 +1062,8 @@ uint8 TerrorZonesMgr::ComputeEventBossApex(EventBossDef const& def) const
         Player* p = session->GetPlayer();
         if (!p || !p->IsInWorld())
             continue;
+        if (p->IsGameMaster())
+            continue;
         uint8 lvl = p->GetLevel();
         if (lvl > highest)
             highest = lvl;
@@ -1763,6 +1765,8 @@ bool TerrorZonesMgr::TryEventBossDrop(Player const* player, Loot& loot)
                 continue;
             Player* p = session->GetPlayer();
             if (!p || !p->IsInWorld())
+                continue;
+            if (p->IsGameMaster())
                 continue;
             uint8 lvl = p->GetLevel();
             if (lvl > highest)

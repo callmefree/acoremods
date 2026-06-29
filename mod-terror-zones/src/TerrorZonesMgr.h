@@ -267,6 +267,12 @@ uint8 ComputeTargetLevelPure(bool zoneIsEmpowered,
 // should assign. Enforces the "never scale down" invariant.
 uint8 ApplyScaling(uint8 baseline, uint8 target);
 
+// Aggregate a set of player levels into a single target level. `useMax`
+// false → median (upper-middle for even counts); true → max. Empty
+// input returns 0 (caller treats as "no players → leave native").
+// Pure + unit-tested.
+uint8 AggregatePlayerLevel(std::vector<uint8> levels, bool useMax);
+
 // Pure Slice 3 multiplier math. Returns `baseline * mult`, clamped to
 // UINT32_MAX on overflow. Separated out so unit tests can exercise it
 // without standing up a live session.
@@ -967,6 +973,10 @@ private:
     uint8 _maxPlayerLevel = 80;
     bool _scalingSkipWorldBosses = true;
     bool _scalingSkipFriendly = false;
+    // Player-level aggregate used to pick an empowered zone's mob level.
+    // false → median of real players in the zone (default); true → max.
+    // Set from TerrorZones.Scaling.PlayerLevelMetric (median|max).
+    bool _scalingUseMaxLevel = false;
     std::unordered_set<uint32> _scalingNeverEntries;
 
     // Slice 3 — rewards.

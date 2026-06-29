@@ -125,6 +125,13 @@ void TerrorZonesMgr::LoadConfig()
         "TerrorZones.Scaling.SkipWorldBosses", true);
     _scalingSkipFriendly = sConfigMgr->GetOption<bool>(
         "TerrorZones.Scaling.SkipFriendly", false);
+    {
+        std::string metric = sConfigMgr->GetOption<std::string>(
+            "TerrorZones.Scaling.PlayerLevelMetric", "median");
+        for (char& ch : metric)
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        _scalingUseMaxLevel = (metric == "max");
+    }
 
     _scalingNeverEntries.clear();
     {
@@ -492,10 +499,12 @@ void TerrorZonesMgr::LoadConfig()
              _startupForceTick);
     LOG_INFO("module",
              "mod-terror-zones: scaling enable={}, rescale_on_tick={}, "
-             "skip_bosses={}, skip_friendly={}, never_entries={}",
+             "skip_bosses={}, skip_friendly={}, never_entries={}, "
+             "player_level_metric={}",
              _scalingEnabled, _scalingRescaleOnTick,
              _scalingSkipWorldBosses, _scalingSkipFriendly,
-             static_cast<uint32>(_scalingNeverEntries.size()));
+             static_cast<uint32>(_scalingNeverEntries.size()),
+             _scalingUseMaxLevel ? "max" : "median");
     LOG_INFO("module",
              "mod-terror-zones: rewards enable={} xp={:.2f} gold={:.2f} "
              "tier_bump_chance={:.3f} tier_bump_level_tolerance={} "
@@ -812,7 +821,9 @@ void TerrorZonesMgr::InitializeOnStartup()
             if (!session || session->IsBot())
                 continue;
             Player* p = session->GetPlayer();
-            if (p && p->IsInWorld())
+            // GMs in GM mode are staff, not participants — don't let
+            // one trigger the deferred startup rotation.
+            if (p && p->IsInWorld() && !p->IsGameMaster())
                 ++realPlayersOnline;
         }
 
@@ -907,6 +918,9 @@ void TerrorZonesMgr::RunRotation(uint64 tickAt, bool announce)
         {
             Player* p = kv.second ? kv.second->GetPlayer() : nullptr;
             if (!p || !p->IsInWorld())
+                continue;
+            // GMs in GM mode don't bias which zone is chosen.
+            if (p->IsGameMaster())
                 continue;
             Group* g = p->GetGroup();
             if (g)
@@ -1707,6 +1721,34 @@ void TerrorZonesMgr::OnPlayerUpdateZone(Player* player, uint32 newZone)
     {
         if (IsCategoryEnabledFor(player, ANNOUNCE_ZONE_ENTRY))
             SendEntryLineTo(player, newName, remaining);
+    }
+
+    // Recompute mob levels against the real players now present.
+    // ComputeTargetLevel is zone-scoped, so a player entering an
+    // empowered zone (or leaving one) changes the aggregate that
+    // already-spawned mobs were scaled to. Without this re-walk the
+    // levels stay frozen at whatever they were when the zone last
+    // ticked — the exact reason a max-level player could find an
+    // empowered low zone still full of native-level mobs.
+    //
+    // Gated to real (non-bot) players for two reasons: bots are
+    // excluded from the level aggregate (so their crossings can't
+    // change the target), and with ~hundreds of bots a full-zone
+    // SelectLevel walk on every bot border-cross would be a serious
+    // perf cost. force=true bypasses the RescaleOnTick gate — a
+    // player physically entering is an explicit trigger.
+    if (_scalingEnabled && oldZone != newZone)
+    {
+        WorldSession* s = player->GetSession();
+        if (s && !s->IsBot())
+        {
+            if (newEmpowered)
+                WalkZoneRescale(newZone, /*edgeOn*/ true, /*force*/ true);
+            // Leaving an empowered zone: re-walk it so its mobs reflect
+            // whoever remains (or fall back to native once empty).
+            if (oldZone != 0)
+                WalkZoneRescale(oldZone, /*edgeOn*/ true, /*force*/ true);
+        }
     }
 }
 

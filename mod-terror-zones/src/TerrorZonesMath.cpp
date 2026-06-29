@@ -175,6 +175,21 @@ uint8 ApplyScaling(uint8 baseline, uint8 target)
     return target;
 }
 
+uint8 AggregatePlayerLevel(std::vector<uint8> levels, bool useMax)
+{
+    if (levels.empty())
+        return 0;
+    if (useMax)
+        return *std::max_element(levels.begin(), levels.end());
+    // Median. For an even count we take the upper of the two middle
+    // values (levels[n/2]) so a level-split party leans slightly toward
+    // the higher players rather than under-leveling the top half — a
+    // 30/72 duo targets 72, not 30. Configurable to straight max via
+    // TerrorZones.Scaling.PlayerLevelMetric.
+    std::sort(levels.begin(), levels.end());
+    return levels[levels.size() / 2];
+}
+
 // -----------------------------------------------------------------------------
 // Slice 3 — baseline reward math (pure)
 // -----------------------------------------------------------------------------

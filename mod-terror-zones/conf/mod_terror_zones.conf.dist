@@ -183,6 +183,22 @@ TerrorZones.Scaling.SkipWorldBosses = 1
 
 TerrorZones.Scaling.SkipFriendly = 0
 
+#    TerrorZones.Scaling.PlayerLevelMetric
+#        Description: How an empowered zone picks the level it scales its mobs
+#                     to, based on the REAL (non-bot) players currently standing
+#                     in that zone:
+#                       median  - upper-middle level of the players in the zone
+#                                 (a 30/72 duo targets 72). The default.
+#                       max     - the single highest player in the zone.
+#                     When no real player is in the zone, mobs are left at their
+#                     native level (an empowered-but-empty zone is not
+#                     re-leveled). Mob level is recomputed when a real player
+#                     enters or leaves the zone, and on each rotation tick.
+#                     Mobs are never scaled below their native level.
+#        Default:     median
+
+TerrorZones.Scaling.PlayerLevelMetric = median
+
 #    TerrorZones.Scaling.NeverScaleEntries
 #        Description: CSV blocklist of creature entry IDs that must never be
 #                     scaled regardless of the other checks. Escape hatch for

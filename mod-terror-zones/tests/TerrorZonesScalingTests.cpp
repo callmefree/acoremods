@@ -61,6 +61,58 @@ TEST(TerrorZonesScaling, EmpoweredLowestPlayerLiftedToZoneFloor)
     EXPECT_EQ(ComputeTargetLevelPure(true, 0), 1);
 }
 
+// ---------- AggregatePlayerLevel ----------
+//
+// Zone-scoped target metric: the live ComputeTargetLevel collects the
+// levels of real players standing in the empowered zone and folds them
+// into one number via this helper (median by default, max optionally).
+// Empty input → 0, which the live path treats as "no players → leave
+// mobs native".
+
+TEST(TerrorZonesScaling, AggregateEmptyReturnsZero)
+{
+    EXPECT_EQ(AggregatePlayerLevel({}, /*useMax*/ false), 0);
+    EXPECT_EQ(AggregatePlayerLevel({}, /*useMax*/ true), 0);
+}
+
+TEST(TerrorZonesScaling, AggregateSinglePlayer)
+{
+    EXPECT_EQ(AggregatePlayerLevel({72}, false), 72);
+    EXPECT_EQ(AggregatePlayerLevel({72}, true), 72);
+}
+
+TEST(TerrorZonesScaling, AggregateMedianOddCount)
+{
+    // Sorted {30, 60, 72} → middle is 60.
+    EXPECT_EQ(AggregatePlayerLevel({72, 30, 60}, false), 60);
+}
+
+TEST(TerrorZonesScaling, AggregateMedianEvenCountLeansHigh)
+{
+    // Sorted {30, 72} → upper-middle (index n/2 = 1) is 72, so a
+    // level-split duo targets the higher player rather than the lower.
+    EXPECT_EQ(AggregatePlayerLevel({72, 30}, false), 72);
+    // {20, 40, 60, 80} → index 2 = 60.
+    EXPECT_EQ(AggregatePlayerLevel({80, 20, 60, 40}, false), 60);
+}
+
+TEST(TerrorZonesScaling, AggregateMaxIgnoresOthers)
+{
+    EXPECT_EQ(AggregatePlayerLevel({30, 72, 60}, /*useMax*/ true), 72);
+}
+
+// Composition: the zone-scoped target a level-72 solo player produces
+// in an empowered Hinterlands (zoneMin=40, T1 → ceiling 81). The bug
+// this fixes: pre-change the metric was server-wide and snapshotted at
+// tick time, so an empty-at-tick zone floored to 40 and never lifted.
+TEST(TerrorZonesScaling, AggregateThenTargetLevel72InLowZone)
+{
+    uint8 agg = AggregatePlayerLevel({72}, false);
+    uint8 target = ComputeTargetLevelPure(true, agg, /*min*/ 40, /*tier*/ 1);
+    EXPECT_EQ(target, 72);
+    EXPECT_EQ(ApplyScaling(/*nativeRoll*/ 43, target), 72);
+}
+
 // ---------- ApplyScaling ----------
 
 TEST(TerrorZonesScaling, ApplyScalingNoTargetReturnsBaseline)
