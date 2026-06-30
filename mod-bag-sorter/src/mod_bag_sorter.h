@@ -26,17 +26,19 @@ namespace BagSorter
 {
     enum class SortMode : uint8
     {
-        TypeQuality = 0,    // class/subclass/type, then quality desc, then ilvl desc, then name
-        Quality     = 1,    // quality desc, then name
-        ItemLevel   = 2,    // ilvl desc, then quality desc, then name
-        Name        = 3,    // name A-Z
+        TypeQuality          = 0,    // class/subclass/type, then quality desc, then ilvl desc, then name
+        Quality              = 1,    // quality desc, then name
+        ItemLevel            = 2,    // ilvl desc, then quality desc, then name
+        Name                 = 3,    // name A-Z
+        TypeQualityQuestLast = 4,    // TypeQuality ordering, then quest items swept into the last bag
     };
 
     struct Settings
     {
-        bool Enable      = true;
-        bool MergeStacks = true;
-        bool Announce    = true;
+        bool Enable         = true;
+        bool MergeStacks    = true;
+        bool Announce       = true;
+        bool PinHearthstone = true;  // always place the Hearthstone in the backpack's first slot
     };
 
     // Runtime config, populated from worldserver config in OnAfterConfigLoad.
@@ -47,6 +49,10 @@ namespace BagSorter
     // Specialized (profession) bags are sorted internally; general bags + the
     // backpack are sorted together as one pool. Never moves items across pools,
     // so every move is a guaranteed-valid SwapItem.
+    //
+    // If PinHearthstone is set, the Hearthstone is forced into the backpack's
+    // first slot for every mode. In TypeQualityQuestLast, quest-class items are
+    // additionally packed into the tail of the general pool (the last bag).
     uint32 Sort(Player* player, SortMode mode);
 }
 

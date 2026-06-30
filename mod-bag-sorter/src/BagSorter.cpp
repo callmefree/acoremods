@@ -34,6 +34,8 @@ using namespace BagSorter;
 
 namespace
 {
+    constexpr uint32 HEARTHSTONE_ITEM_ENTRY = 6948;
+
     // Pack a (bag, slot) pair into the uint16 position used by Player::SwapItem.
     inline uint16 PackPos(uint8 bag, uint8 slot)
     {
@@ -41,18 +43,20 @@ namespace
     }
 
     // A "pool" is an ordered list of slot positions that items may freely move
-    // between. Pool 0 is the backpack + every general (BagFamily == 0) equipped
-    // bag; each specialized bag forms its own pool so we never attempt a move a
-    // bag family would reject.
+    // between. pools[0] is always the general pool (backpack first, then every
+    // general BagFamily == 0 equipped bag); each specialized bag forms its own
+    // pool so we never attempt a move a bag family would reject.
     void BuildPools(Player* player, std::vector<std::vector<uint16>>& pools)
     {
         std::vector<uint16> general;
 
-        // Backpack (INVENTORY_SLOT_BAG_0, slots 23..38).
+        // Backpack (INVENTORY_SLOT_BAG_0, slots 23..38). slots[0] here is the
+        // backpack's first slot - the "bag 0, slot 0" the Hearthstone is pinned to.
         for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
             general.push_back(PackPos(INVENTORY_SLOT_BAG_0, slot));
 
-        // The 4 equipped bag containers (bag slots 19..22).
+        // The 4 equipped bag containers (bag slots 19..22), in order, so the last
+        // equipped general bag lands at the tail of the general pool.
         for (uint8 bag = INVENTORY_SLOT_BAG_START; bag < INVENTORY_SLOT_BAG_END; ++bag)
         {
             Bag* pBag = player->GetBagByPos(bag);
@@ -120,6 +124,11 @@ namespace
 
     bool CompareItems(Item* a, Item* b, SortMode mode)
     {
+        // Quest-last shares the TypeQuality ordering; the quest sweep is applied
+        // afterwards during placement, not in the comparator.
+        if (mode == SortMode::TypeQualityQuestLast)
+            mode = SortMode::TypeQuality;
+
         ItemTemplate const* ta = a->GetTemplate();
         ItemTemplate const* tb = b->GetTemplate();
 
@@ -140,6 +149,7 @@ namespace
                 if (ta->Quality != tb->Quality)             return ta->Quality > tb->Quality;
                 break;
             case SortMode::Name:
+            case SortMode::TypeQualityQuestLast:            // already remapped above
                 break;
         }
 
@@ -149,16 +159,57 @@ namespace
         return a->GetGUID() < b->GetGUID(); // stable, deterministic tiebreak
     }
 
-    // Reorder the pool's items into sorted order using selection-by-swap.
-    // Identity is tracked by ObjectGuid (re-resolved each step) so an item that
-    // is merged away mid-pass is simply skipped rather than dereferenced stale.
-    uint32 PlacePool(Player* player, std::vector<uint16> const& slots, SortMode mode)
+    std::vector<Item*> CollectItems(Player* player, std::vector<uint16> const& slots)
     {
         std::vector<Item*> items;
         for (uint16 pos : slots)
             if (Item* item = player->GetItemByPos(pos))
                 items.push_back(item);
 
+        return items;
+    }
+
+    // Move each item to its assigned slot using validated swaps. 'targets' is a
+    // partial slot->item assignment (slots with no target end empty). Identity is
+    // tracked by ObjectGuid, re-resolved each step, so an item that is merged away
+    // mid-pass is skipped rather than dereferenced stale. Target slots are
+    // pairwise distinct, so this realizes the assignment in <= N swaps.
+    uint32 ApplyTargets(Player* player, std::vector<uint16> const& slots,
+                        std::vector<std::pair<uint16, ObjectGuid>> const& targets)
+    {
+        uint32 placed = 0;
+        for (std::pair<uint16, ObjectGuid> const& target : targets)
+        {
+            uint16 const destPos = target.first;
+            ObjectGuid const guid = target.second;
+
+            uint16 curPos = 0xFFFF;
+            for (uint16 pos : slots)
+            {
+                Item* item = player->GetItemByPos(pos);
+                if (item && item->GetGUID() == guid)
+                {
+                    curPos = pos;
+                    break;
+                }
+            }
+
+            if (curPos == 0xFFFF)
+                continue; // merged away during this pass
+
+            if (curPos != destPos)
+                player->SwapItem(curPos, destPos);
+
+            ++placed;
+        }
+
+        return placed;
+    }
+
+    // Specialized bags: a plain sorted, front-packed placement.
+    uint32 PlacePool(Player* player, std::vector<uint16> const& slots, SortMode mode)
+    {
+        std::vector<Item*> items = CollectItems(player, slots);
         if (items.empty())
             return 0;
 
@@ -167,35 +218,77 @@ namespace
             return CompareItems(a, b, mode);
         });
 
-        std::vector<ObjectGuid> order;
-        order.reserve(items.size());
-        for (Item* item : items)
-            order.push_back(item->GetGUID());
+        std::vector<std::pair<uint16, ObjectGuid>> targets;
+        targets.reserve(items.size());
+        for (std::size_t i = 0; i < items.size() && i < slots.size(); ++i)
+            targets.emplace_back(slots[i], items[i]->GetGUID());
 
-        uint32 placed = 0;
-        for (std::size_t i = 0; i < order.size() && i < slots.size(); ++i)
+        return ApplyTargets(player, slots, targets);
+    }
+
+    // General pool: front-packed sorted items, with the Hearthstone optionally
+    // pinned to the first slot and (in quest-last mode) quest items anchored to
+    // the tail so they end up in the last bag, clear of everything else.
+    uint32 PlaceGeneralPool(Player* player, std::vector<uint16> const& slots, SortMode mode)
+    {
+        std::vector<Item*> items = CollectItems(player, slots);
+        if (items.empty())
+            return 0;
+
+        bool const questLast = (mode == SortMode::TypeQualityQuestLast);
+        bool const pinHearth = settings.PinHearthstone;
+
+        Item* hearthstone = nullptr;
+        std::vector<Item*> quest;
+        std::vector<Item*> rest;
+
+        for (Item* item : items)
         {
-            uint16 desiredPos = 0xFFFF;
-            for (uint16 pos : slots)
+            if (pinHearth && !hearthstone && item->GetEntry() == HEARTHSTONE_ITEM_ENTRY)
             {
-                Item* item = player->GetItemByPos(pos);
-                if (item && item->GetGUID() == order[i])
-                {
-                    desiredPos = pos;
-                    break;
-                }
+                hearthstone = item;
+                continue;
             }
 
-            if (desiredPos == 0xFFFF)
-                continue; // merged away during this pass
-
-            if (desiredPos != slots[i])
-                player->SwapItem(desiredPos, slots[i]); // move/swap desired into target slot
-
-            ++placed;
+            if (questLast && item->GetTemplate()->Class == ITEM_CLASS_QUEST)
+                quest.push_back(item);
+            else
+                rest.push_back(item);
         }
 
-        return placed;
+        auto const cmp = [mode](Item* a, Item* b) { return CompareItems(a, b, mode); };
+        std::sort(rest.begin(), rest.end(), cmp);
+        std::sort(quest.begin(), quest.end(), cmp);
+
+        std::vector<std::pair<uint16, ObjectGuid>> targets;
+        targets.reserve(items.size());
+
+        std::size_t idx = 0;
+        if (hearthstone)
+        {
+            targets.emplace_back(slots[0], hearthstone->GetGUID());
+            idx = 1;
+        }
+
+        for (Item* item : rest)
+        {
+            if (idx >= slots.size())
+                break;
+
+            targets.emplace_back(slots[idx], item->GetGUID());
+            ++idx;
+        }
+
+        // Anchor quest items to the final slots of the pool (the last bag). All
+        // items currently fit, so quest never overlaps the front-packed rest.
+        if (!quest.empty())
+        {
+            std::size_t const qStart = slots.size() - quest.size();
+            for (std::size_t q = 0; q < quest.size(); ++q)
+                targets.emplace_back(slots[qStart + q], quest[q]->GetGUID());
+        }
+
+        return ApplyTargets(player, slots, targets);
     }
 }
 
@@ -207,13 +300,21 @@ uint32 BagSorter::Sort(Player* player, SortMode mode)
     std::vector<std::vector<uint16>> pools;
     BuildPools(player, pools);
 
-    uint32 total = 0;
-    for (std::vector<uint16> const& pool : pools)
-    {
-        if (settings.MergeStacks)
+    if (settings.MergeStacks)
+        for (std::vector<uint16> const& pool : pools)
             ConsolidatePool(player, pool);
 
-        total += PlacePool(player, pool, mode);
+    // Hearthstone pinning and the quest sweep only apply to the general pool;
+    // specialized bags just sort their own contents.
+    SortMode const subMode = (mode == SortMode::TypeQualityQuestLast) ? SortMode::TypeQuality : mode;
+
+    uint32 total = 0;
+    for (std::size_t p = 0; p < pools.size(); ++p)
+    {
+        if (p == 0)
+            total += PlaceGeneralPool(player, pools[p], mode);
+        else
+            total += PlacePool(player, pools[p], subMode);
     }
 
     return total;

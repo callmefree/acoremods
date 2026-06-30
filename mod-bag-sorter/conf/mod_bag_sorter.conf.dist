@@ -28,3 +28,12 @@ BagSorter.MergeStacks = 1
 #
 
 BagSorter.Announce = 1
+
+#
+#    BagSorter.PinHearthstone
+#        Description: Always place the Hearthstone (item 6948) in the backpack's
+#                     first slot when sorting, regardless of the chosen mode.
+#        Default:     1 (enabled)
+#
+
+BagSorter.PinHearthstone = 1

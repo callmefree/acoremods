@@ -37,7 +37,8 @@ namespace
         ACTION_SORT_QUALITY     = 1002,
         ACTION_SORT_ILVL        = 1003,
         ACTION_SORT_NAME        = 1004,
-        ACTION_CANCEL           = 1005,
+        ACTION_SORT_QUEST       = 1005,
+        ACTION_CANCEL           = 1006,
     };
 
     void RunSortAndReport(Player* player, BagSorter::SortMode mode)
@@ -89,6 +90,8 @@ public:
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By quality", SENDER_BAGSORT, ACTION_SORT_QUALITY);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By item level", SENDER_BAGSORT, ACTION_SORT_ILVL);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By name (A-Z)", SENDER_BAGSORT, ACTION_SORT_NAME);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Type & quality, quest items to last bag",
+                    SENDER_BAGSORT, ACTION_SORT_QUEST);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nevermind", SENDER_BAGSORT, ACTION_CANCEL);
                 SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
                 break;
@@ -103,6 +106,9 @@ public:
                 break;
             case ACTION_SORT_NAME:
                 RunSortAndReport(player, BagSorter::SortMode::Name);
+                break;
+            case ACTION_SORT_QUEST:
+                RunSortAndReport(player, BagSorter::SortMode::TypeQualityQuestLast);
                 break;
             case ACTION_CANCEL:
             default:
@@ -121,9 +127,10 @@ public:
 
     void OnAfterConfigLoad(bool /*reload*/) override
     {
-        BagSorter::settings.Enable      = sConfigMgr->GetOption<bool>("BagSorter.Enable", true);
-        BagSorter::settings.MergeStacks = sConfigMgr->GetOption<bool>("BagSorter.MergeStacks", true);
-        BagSorter::settings.Announce    = sConfigMgr->GetOption<bool>("BagSorter.Announce", true);
+        BagSorter::settings.Enable         = sConfigMgr->GetOption<bool>("BagSorter.Enable", true);
+        BagSorter::settings.MergeStacks    = sConfigMgr->GetOption<bool>("BagSorter.MergeStacks", true);
+        BagSorter::settings.Announce       = sConfigMgr->GetOption<bool>("BagSorter.Announce", true);
+        BagSorter::settings.PinHearthstone = sConfigMgr->GetOption<bool>("BagSorter.PinHearthstone", true);
     }
 };
 

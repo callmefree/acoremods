@@ -64,9 +64,11 @@ public:
                 mode = BagSorter::SortMode::ItemLevel;
             else if (arg == "name")
                 mode = BagSorter::SortMode::Name;
+            else if (arg == "questlast" || arg == "quest")
+                mode = BagSorter::SortMode::TypeQualityQuestLast;
             else
             {
-                handler->SendSysMessage("Usage: .sortbags [type|quality|ilvl|name]");
+                handler->SendSysMessage("Usage: .sortbags [type|quality|ilvl|name|questlast]");
                 return true;
             }
         }
