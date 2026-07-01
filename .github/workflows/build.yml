@@ -8,7 +8,7 @@ on:
       ac_branch:
         description: 'AzerothCore branch/tag/commit to build against'
         required: true
-        default: 'master'
+        default: 'Latest'
       ac_repo:
         description: 'AzerothCore repository (owner/repo)'
         required: true
@@ -16,7 +16,7 @@ on:
 
 env:
   AC_REPO: ${{ github.event.inputs.ac_repo || 'azerothcore/azerothcore-wotlk' }}
-  AC_BRANCH: ${{ github.event.inputs.ac_branch || 'master' }}
+  AC_BRANCH: ${{ github.event.inputs.ac_branch || 'Latest' }}
   DEPS_URL: 'https://github.com/AzerothCore/deps/releases/download/windows-msbuild-2022/ac-deps-windows-msbuild-2022.7z'
 
 jobs:
