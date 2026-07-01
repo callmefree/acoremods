@@ -79,15 +79,15 @@ namespace
         {
             uint64 delta = startsAt - now;
             if (delta < 60)
-                return "将在" + std::to_string(delta) + "秒后出现"
-            return "将在" + std::to_string(delta / 60) + "分后出现"
+                return "将在" + std::to_string(delta) + "秒后出现";
+            return "将在" + std::to_string(delta / 60) + "分后出现";
         }
         if (now >= endsAt)
-            return "即将离开"
+            return "即将离开";
         uint64 delta = endsAt - now;
         if (delta < 60)
-            return "剩余" + std::to_string(delta) + "秒"
-        return "剩余" + std::to_string(delta / 60) + "分"
+            return "剩余" + std::to_string(delta) + "秒";
+        return "剩余" + std::to_string(delta / 60) + "分";
     }
 
     // Re-open the Terror Zones submenu so the player can keep reading
