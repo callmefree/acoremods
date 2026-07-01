@@ -178,7 +178,7 @@ bool HandleLwstateGet(ChatHandler* handler, char const* args)
     auto toks = Tokenize(args);
     if (toks.size() != 3)
     {
-        handler->SendSysMessage("Usage: .lwstate get <actor_a> <actor_b> <key>");
+        handler->SendSysMessage("用法: .lwstate get <行为体A> <行为体B> <键>");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -186,25 +186,25 @@ bool HandleLwstateGet(ChatHandler* handler, char const* args)
     std::string err;
     if (!ParseActor(toks[0], a, err))
     {
-        handler->PSendSysMessage("actor_a: {}", err);
+        handler->PSendSysMessage("行为体A: {}", err);
         handler->SetSentErrorMessage(true);
         return false;
     }
     if (!ParseActor(toks[1], b, err))
     {
-        handler->PSendSysMessage("actor_b: {}", err);
+        handler->PSendSysMessage("行为体B: {}", err);
         handler->SetSentErrorMessage(true);
         return false;
     }
 
     if (!Has(a, b, toks[2]))
     {
-        handler->PSendSysMessage("(no edge for {} {} '{}')",
+        handler->PSendSysMessage("(无 {} {} {} 的连接)",
                                  FormatActor(a), FormatActor(b), toks[2]);
         return true;
     }
     Value v = Get(a, b, toks[2]);
-    handler->PSendSysMessage("{} {} '{}' = {}",
+    handler->PSendSysMessage("{} {} {} = {}",
                              FormatActor(a), FormatActor(b), toks[2], FormatValue(v));
     return true;
 }
@@ -214,7 +214,7 @@ bool HandleLwstateHas(ChatHandler* handler, char const* args)
     auto toks = Tokenize(args);
     if (toks.size() != 3)
     {
-        handler->SendSysMessage("Usage: .lwstate has <actor_a> <actor_b> <key>");
+        handler->SendSysMessage("用法: .lwstate has <行为体A> <行为体B> <键>");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -240,8 +240,8 @@ bool HandleLwstateSet(ChatHandler* handler, char const* args)
     auto sendUsage = [handler]()
     {
         handler->SendSysMessage(
-            "Usage: .lwstate set <actor_a> <actor_b> <key> <type> <value>");
-        handler->SendSysMessage("  type: int | bool | string | enum");
+            "用法: .lwstate set <行为体A> <行为体B> <键> <类型> <值>");
+        handler->SendSysMessage("  类型: int(整数) | bool(布尔) | string(文字) | enum(枚举)");
         handler->SetSentErrorMessage(true);
     };
 
@@ -307,7 +307,7 @@ bool HandleLwstateSet(ChatHandler* handler, char const* args)
     }
 
     Set(a, b, keyStr, std::move(v));
-    handler->PSendSysMessage("Set {} {} '{}' = {}",
+    handler->PSendSysMessage("已设置 {} {} {} = {}",
                              FormatActor(a), FormatActor(b), keyStr, valStr);
     return true;
 }
@@ -317,7 +317,7 @@ bool HandleLwstateClear(ChatHandler* handler, char const* args)
     auto toks = Tokenize(args);
     if (toks.size() != 3)
     {
-        handler->SendSysMessage("Usage: .lwstate clear <actor_a> <actor_b> <key>");
+        handler->SendSysMessage("用法: .lwstate clear <行为体A> <行为体B> <键>");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -340,7 +340,7 @@ bool HandleLwstateList(ChatHandler* handler, char const* args)
     auto toks = Tokenize(args);
     if (toks.size() != 1)
     {
-        handler->SendSysMessage("Usage: .lwstate list <actor_a>");
+        handler->SendSysMessage("用法: .lwstate list <行为体A>");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -355,13 +355,13 @@ bool HandleLwstateList(ChatHandler* handler, char const* args)
     auto edges = List(a);
     if (edges.empty())
     {
-        handler->PSendSysMessage("(no edges for {})", FormatActor(a));
+        handler->PSendSysMessage("(无 {} 的连接)", FormatActor(a));
         return true;
     }
-    handler->PSendSysMessage("{} edges for {}:", edges.size(), FormatActor(a));
+    handler->PSendSysMessage("{} 条连接：{}", edges.size(), FormatActor(a));
     for (auto const& e : edges)
     {
-        handler->PSendSysMessage("  {} <-> {} '{}' = {}",
+        handler->PSendSysMessage("  {} <-> {} {} = {}",
                                  FormatActor(e.a), FormatActor(e.b),
                                  e.key, FormatValue(e.value));
     }
@@ -373,7 +373,7 @@ bool HandleLwstateNuke(ChatHandler* handler, char const* args)
     auto toks = Tokenize(args);
     if (toks.size() != 1)
     {
-        handler->SendSysMessage("Usage: .lwstate nuke <actor_a>");
+        handler->SendSysMessage("用法: .lwstate nuke <行为体A>");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -386,13 +386,13 @@ bool HandleLwstateNuke(ChatHandler* handler, char const* args)
         return false;
     }
     Nuke(a);
-    handler->PSendSysMessage("Nuked all edges for {}.", FormatActor(a));
+    handler->PSendSysMessage("已清除 {} 的所有连接。", FormatActor(a));
     return true;
 }
 
 bool HandleLwstateCount(ChatHandler* handler, char const* /*args*/)
 {
-    handler->PSendSysMessage("StateGraph: {} cached edges.", EdgeCount());
+    handler->PSendSysMessage("状态图: 缓存了 {} 条连接。", EdgeCount());
     return true;
 }
 

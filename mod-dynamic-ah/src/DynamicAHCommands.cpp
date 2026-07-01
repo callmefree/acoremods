@@ -102,12 +102,12 @@ bool DynamicAHCommands::HandleInterval(ChatHandler *handler, Optional<uint32> mi
     auto &st = ModDynamicAH::Service::Instance().State();
     if (!minutesOpt)
     {
-        handler->PSendSysMessage("Usage: .dah interval <minutes> (current: {} m)", st.intervalMin);
+        handler->PSendSysMessage("用法: .dah interval <分钟>(当前: {} 分钟)", st.intervalMin);
         return true;
     }
     st.intervalMin = *minutesOpt ? *minutesOpt : 1;
     st.nextRunMs = uint64(GameTime::GetGameTimeMS().count()) + 1000;
-    handler->PSendSysMessage("ModDynamicAH: interval set to {} minutes", st.intervalMin);
+    handler->PSendSysMessage("动态AH: 间隔设为 {} 分钟", st.intervalMin);
     return true;
 }
 
@@ -116,7 +116,7 @@ bool DynamicAHCommands::HandleQueue(ChatHandler *handler)
     auto &svc = ModDynamicAH::Service::Instance();
     auto &st = svc.State();
 
-    handler->PSendSysMessage("ModDynamicAH: postQueue={} buyQueue={} budgetUsed={}/{}",
+    handler->PSendSysMessage("动态AH: 上架队列={} 购买队列={} 预算已用={}/{}",
                              st.postQueue.Size(),
                              uint32(svc.Buy().QueueSize()),
                              uint32(svc.Buy().BudgetUsed()),
@@ -133,7 +133,7 @@ bool DynamicAHCommands::HandleClear(ChatHandler *handler)
     ModDynamicAH::DynamicAHPosting::ApplyPlanOnWorld(st, /*maxToApply=*/1000000, handler);
     svc.Buy().Apply(1000000, st.dryRun, handler);
 
-    handler->PSendSysMessage("ModDynamicAH: applied/cleared pending posts & buys (dry-run={}): postQ={} buyQ={}",
+    handler->PSendSysMessage("动态AH: 已应用/清除待处理上架和购买(模拟={}): 上架Q={} 购买Q={}",
                              st.dryRun ? 1u : 0u,
                              st.postQueue.Size(),
                              uint32(svc.Buy().QueueSize()));
@@ -147,15 +147,15 @@ bool DynamicAHCommands::HandlePriceCmd(ChatHandler *handler, Optional<std::strin
 
     if (!catOpt)
     {
-        handler->PSendSysMessage("Price multipliers (percent): dust={} essence={} shard={} elemental={} rareRaw={}",
+        handler->PSendSysMessage("价格乘数(百分比): 尘={} 精华={} 碎片={} 元素={} 原料={}",
                                  int(st.mulDust * 100), int(st.mulEssence * 100), int(st.mulShard * 100),
                                  int(st.mulElemental * 100), int(st.mulRareRaw * 100));
-        handler->PSendSysMessage("Usage: .dah price <dust|essence|shard|elemental|rareraw> <percent>");
+        handler->PSendSysMessage("用法: .dah price <尘|精华|碎片|元素|原料> <百分比>");
         return true;
     }
     if (!pctOpt)
     {
-        handler->PSendSysMessage("Missing percent value.");
+        handler->PSendSysMessage("缺少百分比值。");
         return true;
     }
 
@@ -175,11 +175,11 @@ bool DynamicAHCommands::HandlePriceCmd(ChatHandler *handler, Optional<std::strin
         st.mulRareRaw = v;
     else
     {
-        handler->PSendSysMessage("Unknown category.");
+        handler->PSendSysMessage("未知类别。");
         return true;
     }
 
-    handler->PSendSysMessage("Multiplier for {} set to {:.2f} ({}%%)", c.c_str(), v, int(v * 100));
+    handler->PSendSysMessage("{} 的乘数已设为 {:.2f}({}%%)", c.c_str(), v, int(v * 100));
     return true;
 }
 
@@ -202,7 +202,7 @@ bool DynamicAHCommands::HandleBuyEnable(ChatHandler *handler, Optional<uint32> o
 {
     if (!onOff)
     {
-        handler->PSendSysMessage("Usage: .dah buy enable <0|1>");
+        handler->PSendSysMessage("用法: .dah buy enable <0|1>");
         return true;
     }
     ModDynamicAH::Service::Instance().Buy().CmdEnable(handler, (*onOff != 0));
@@ -214,7 +214,7 @@ bool DynamicAHCommands::HandleBuyBudget(ChatHandler *handler, Optional<uint32> g
     if (!goldOpt)
     {
         ModDynamicAH::Service::Instance().Buy().CmdShow(handler);
-        handler->PSendSysMessage("Usage: .dah buy budget <gold>");
+        handler->PSendSysMessage("用法: .dah buy budget <金币>");
         return true;
     }
     ModDynamicAH::Service::Instance().Buy().CmdBudget(handler, *goldOpt);
@@ -226,7 +226,7 @@ bool DynamicAHCommands::HandleBuyMargin(ChatHandler *handler, Optional<uint32> p
     if (!pctOpt)
     {
         ModDynamicAH::Service::Instance().Buy().CmdShow(handler);
-        handler->PSendSysMessage("Usage: .dah buy margin <percent>");
+        handler->PSendSysMessage("用法: .dah buy margin <百分比>");
         return true;
     }
     ModDynamicAH::Service::Instance().Buy().CmdMargin(handler, *pctOpt);
@@ -238,7 +238,7 @@ bool DynamicAHCommands::HandleBuyPerItem(ChatHandler *handler, Optional<uint32> 
     if (!capOpt)
     {
         ModDynamicAH::Service::Instance().Buy().CmdShow(handler);
-        handler->PSendSysMessage("Usage: .dah buy peritem <N>");
+        handler->PSendSysMessage("用法: .dah buy peritem <数量>");
         return true;
     }
     ModDynamicAH::Service::Instance().Buy().CmdPerItem(handler, *capOpt);
@@ -258,7 +258,7 @@ bool DynamicAHCommands::HandleBuyFund(ChatHandler *handler, Optional<uint32> gol
 {
     if (!goldOpt)
     {
-        handler->PSendSysMessage("Usage: .dah buy fund <gold> [alliance|horde|neutral|all]");
+        handler->PSendSysMessage("用法: .dah buy fund <金币> [alliance|horde|neutral|all]");
         return true;
     }
     ModDynamicAH::Service::Instance().CmdFund(handler, *goldOpt, whichOpt ? *whichOpt : "all");
@@ -276,7 +276,7 @@ bool DynamicAHCommands::HandleCapsEnable(ChatHandler *handler, Optional<uint32> 
 {
     if (!onOff)
     {
-        handler->PSendSysMessage("Usage: .dah caps enable <0|1>");
+        handler->PSendSysMessage("用法: .dah caps enable <0|1>");
         return true;
     }
     ModDynamicAH::Service::Instance().CmdCapsEnable(handler, (*onOff != 0));

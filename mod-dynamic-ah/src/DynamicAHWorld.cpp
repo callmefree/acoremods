@@ -42,7 +42,7 @@ bool DynamicAHWorld::HandleLoop(ChatHandler *handler)
     auto &g = Service::Instance().State();
     g.loopEnabled = !g.loopEnabled;
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH: loop is now {}", g.loopEnabled ? "ON" : "OFF");
+        handler->PSendSysMessage("动态AH: 循环已{}", g.loopEnabled ? "ON" : "OFF");
     return true;
 }
 
@@ -51,7 +51,7 @@ bool DynamicAHWorld::HandleDryRun(ChatHandler *handler)
     auto &g = Service::Instance().State();
     g.dryRun = !g.dryRun;
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH: dry-run is now {}", g.dryRun ? "ON" : "OFF");
+        handler->PSendSysMessage("动态AH: 模拟模式已{}", g.dryRun ? "ON" : "OFF");
     return true;
 }
 
@@ -60,7 +60,7 @@ bool DynamicAHWorld::HandleStatus(ChatHandler *handler)
     auto &s = Service::Instance().State();
     if (handler)
     {
-        handler->PSendSysMessage("ModDynamicAH: loop={} dryrun={} intervalMin={} nextRunMs={} queuedPosts={} queuedBuys={}",
+        handler->PSendSysMessage("动态AH: 循环={} 模拟={} 间隔={}分 下次运行={} 排队上架={} 排队购买={}",
                                  s.loopEnabled ? "ON" : "OFF",
                                  s.dryRun ? "ON" : "OFF",
                                  s.intervalMin,

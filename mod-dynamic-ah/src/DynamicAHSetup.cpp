@@ -197,7 +197,7 @@ namespace ModDynamicAH
             if (!accId)
             {
                 if (handler)
-                    handler->PSendSysMessage("ModDynamicAH: setup failed creating or finding account '{}'", accName.c_str());
+                    handler->PSendSysMessage("动态AH: 创建或查找账户 {} 失败", accName.c_str());
                 return;
             }
 
@@ -216,7 +216,7 @@ namespace ModDynamicAH
                 s.ownerNeutral = ensureChar(neutName, nr, nc, ng);
 
             if (handler)
-                handler->PSendSysMessage("ModDynamicAH: setup complete. Owners A/H/N: {} / {} / {}",
+                handler->PSendSysMessage("动态AH: 设置完成。拥有者 联盟/部落/中立: {} / {} / {}",
                                          s.ownerAlliance, s.ownerHorde, s.ownerNeutral);
 
             LOG_INFO("mod.dynamicah", "Setup finished: A={} H={} N={}", s.ownerAlliance, s.ownerHorde, s.ownerNeutral);

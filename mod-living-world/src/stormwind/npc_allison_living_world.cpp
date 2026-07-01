@@ -323,31 +323,31 @@ private:
             case Branch::Stranger:
                 textId = TEXT_BRANCH_STRANGER;
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "Just looking around for now.",
+                                 "我只是随便看看。",
                                  GOSSIP_SENDER_MAIN, ACTION_LOOK_AROUND);
                 break;
 
             case Branch::Returning:
                 textId = TEXT_BRANCH_RETURNING;
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "What's the news in the city?",
+                                 "城里有什么新鲜事？",
                                  GOSSIP_SENDER_MAIN, ACTION_ASK_NEWS);
                 break;
 
             case Branch::Curious:
                 textId = TEXT_BRANCH_CURIOUS;
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "Why not the docks?",
+                                 "为什么不去码头？",
                                  GOSSIP_SENDER_MAIN, ACTION_WHY_NOT_DOCKS);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "Tell me more about the harbor.",
+                                 "跟我说说港口的事。",
                                  GOSSIP_SENDER_MAIN, ACTION_TELL_HARBOR);
                 break;
 
             case Branch::TheNo:
                 textId = TEXT_BRANCH_THE_NO;
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "[Drop the subject.]",
+                                 "[换个话题吧。]",
                                  GOSSIP_SENDER_MAIN, ACTION_DROP_IT);
                 break;
 
@@ -355,7 +355,7 @@ private:
                 textId = TEXT_BRANCH_REGULAR;
                 // Phase 4 arc hook — only show if not yet given.
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "Tell me about your friend at the docks.",
+                                 "跟我说说你码头上的朋友。",
                                  GOSSIP_SENDER_MAIN, ACTION_TELL_ABOUT_FRIEND);
                 break;
 

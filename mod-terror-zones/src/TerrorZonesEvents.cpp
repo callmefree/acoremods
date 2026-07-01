@@ -1401,15 +1401,13 @@ void TerrorZonesMgr::SendEventEndingCountdown(ActiveEvent const& evt,
     {
         uint32 mins = (remainingSec + 30) / 60;
         std::snprintf(buf, sizeof(buf),
-            "|cffff8040%s prepares to withdraw — %u minute%s until "
-            "the event ends.|r",
+            "|cffff8040%s 准备撤退 — %u 分钟后事件结束。|r",
             evt.displayName.c_str(), mins, (mins == 1 ? "" : "s"));
     }
     else
     {
         std::snprintf(buf, sizeof(buf),
-            "|cffff8040%s prepares to withdraw — %u seconds until "
-            "the event ends.|r",
+            "|cffff8040%s 准备撤退 — %u 秒后事件结束。|r",
             evt.displayName.c_str(), remainingSec);
     }
     BroadcastZoneLineGated(evt.zoneId, buf, ANNOUNCE_EVENT_ENDING);

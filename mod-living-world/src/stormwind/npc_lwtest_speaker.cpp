@@ -63,13 +63,13 @@ public:
         if (visited)
         {
             AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                             "We've spoken before. Forget us.",
+                             "我们之前谈过。忘了我们吧。",
                              GOSSIP_SENDER_MAIN, ACTION_FORGET);
         }
         else
         {
             AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                             "Hello, stranger. Remember our guild.",
+                             "你好，陌生人。记住我们的公会。",
                              GOSSIP_SENDER_MAIN, ACTION_GREET);
         }
 

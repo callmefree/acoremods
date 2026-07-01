@@ -48,7 +48,7 @@ public:
 
         if (!BagSorter::settings.Enable)
         {
-            handler->SendSysMessage("Bag sorting is disabled on this server.");
+            handler->SendSysMessage("此服务器上的背包整理功能已禁用。");
             return true;
         }
 
@@ -68,16 +68,16 @@ public:
                 mode = BagSorter::SortMode::TypeQualityQuestLast;
             else
             {
-                handler->SendSysMessage("Usage: .sortbags [type|quality|ilvl|name|questlast]");
+                handler->SendSysMessage("用法: .sortbags [type(类型)|quality(品质)|ilvl(物品等级)|name(名称)|questlast(任务物品最后)]");
                 return true;
             }
         }
 
         uint32 const count = BagSorter::Sort(player, mode);
         if (count > 0)
-            handler->PSendSysMessage("Your bags have been organized ({} items).", count);
+            handler->PSendSysMessage("你的背包已整理完毕（共 {} 件物品）。", count);
         else
-            handler->SendSysMessage("There was nothing to organize.");
+            handler->SendSysMessage("没有需要整理的东西。");
 
         return true;
     }

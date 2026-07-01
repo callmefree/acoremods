@@ -22,21 +22,21 @@ namespace
         auto& mgr = MountProgressionMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Mount progression is disabled.");
+            handler->SendSysMessage("坐骑进阶功能已禁用。");
             return true;
         }
 
         uint32 activeSpell = mgr.GetActiveMount(player);
         if (!activeSpell)
         {
-            handler->SendSysMessage("You have no active mount. Summon a mount to activate it.");
+            handler->SendSysMessage("你没有激活中的坐骑。召唤一只坐骑来激活它。");
             return true;
         }
 
         CatalogEntry const* entry = mgr.GetCatalogEntry(activeSpell);
         if (!entry)
         {
-            handler->PSendSysMessage("Active mount spell {} is not in the catalog.", activeSpell);
+            handler->PSendSysMessage("激活的坐骑法术 {} 不在目录中。", activeSpell);
             return true;
         }
 
@@ -45,14 +45,14 @@ namespace
         uint32 xp = mp ? mp->xp : 0;
         uint32 need = mgr.XPToNextLevel(entry->rarity, level);
 
-        handler->PSendSysMessage("Active mount: |cffffd100{}|r", entry->displayName);
-        handler->PSendSysMessage("  Rarity: {}   Type: {}",
+        handler->PSendSysMessage("当前坐骑：|cffffd100{}|r", entry->displayName);
+        handler->PSendSysMessage("  稀有度：{}   类型：{}",
                                  RarityName(entry->rarity), TypeName(entry->type));
         if (need == 0)
-            handler->PSendSysMessage("  Level: {} (max)", level);
+            handler->PSendSysMessage("  等级：{}（满级）", level);
         else
-            handler->PSendSysMessage("  Level: {}   XP: {} / {}", level, xp, need);
-        handler->PSendSysMessage("  XP source: {}", XPSourceName(entry->type));
+            handler->PSendSysMessage("  等级：{}   经验：{} / {}", level, xp, need);
+        handler->PSendSysMessage("  经验来源：{}", XPSourceName(entry->type));
         return true;
     }
 
@@ -65,14 +65,14 @@ namespace
         auto& mgr = MountProgressionMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Mount progression is disabled.");
+            handler->SendSysMessage("坐骑进阶功能已禁用。");
             return true;
         }
 
         auto all = mgr.GetAllProgress(player);
         if (all.empty())
         {
-            handler->SendSysMessage("You have no tracked mounts yet. Summon a mount to start.");
+            handler->SendSysMessage("你还没有追踪的坐骑。召唤一只坐骑来开始。");
             return true;
         }
 
@@ -81,7 +81,7 @@ namespace
                       return a.level != b.level ? a.level > b.level : a.spellId < b.spellId;
                   });
 
-        handler->PSendSysMessage("Tracked mounts ({}):", static_cast<uint32>(all.size()));
+        handler->PSendSysMessage("已追踪的坐骑（{}）：", static_cast<uint32>(all.size()));
         for (MountProgress const& mp : all)
         {
             CatalogEntry const* entry = mgr.GetCatalogEntry(mp.spellId);
@@ -97,14 +97,14 @@ namespace
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .mount give <spellId>");
+            handler->SendSysMessage("用法: .mount give <法术ID>");
             handler->SetSentErrorMessage(true);
             return false;
         }
         long spellId = std::strtol(args, nullptr, 10);
         if (spellId <= 0)
         {
-            handler->SendSysMessage("spellId must be a positive integer.");
+            handler->SendSysMessage("法术ID必须为正整数。");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -116,7 +116,7 @@ namespace
         CatalogEntry const* entry = mgr.GetCatalogEntry(static_cast<uint32>(spellId));
         if (!entry)
         {
-            handler->PSendSysMessage("Spell {} is not in the mount catalog.",
+            handler->PSendSysMessage("法术 {} 不在坐骑目录中。",
                                      static_cast<uint32>(spellId));
             handler->SetSentErrorMessage(true);
             return false;
@@ -128,7 +128,7 @@ namespace
         mgr.ActivateMount(player, static_cast<uint32>(spellId));
 
         handler->PSendSysMessage(
-            "Gave |cffffd100{}|r ({}, {}) and set as active mount.",
+            "已给予坐骑 |cffffd100{}|r（{}，{}）并设为当前坐骑。",
             entry->displayName, RarityName(entry->rarity), TypeName(entry->type));
         return true;
     }
@@ -137,14 +137,14 @@ namespace
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .mount addxp <amount>");
+            handler->SendSysMessage("用法: .mount addxp <数量>");
             handler->SetSentErrorMessage(true);
             return false;
         }
         long amount = std::strtol(args, nullptr, 10);
         if (amount <= 0)
         {
-            handler->SendSysMessage("Amount must be a positive integer.");
+            handler->SendSysMessage("数量必须为正整数。");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -158,7 +158,7 @@ namespace
                                     "Mount up first.");
             return true;
         }
-        handler->PSendSysMessage("Awarded {} XP to your active mount.",
+        handler->PSendSysMessage("已为当前坐骑增加 {} 点经验。",
                                  static_cast<uint32>(amount));
         return true;
     }
@@ -167,14 +167,14 @@ namespace
     {
         if (!args || !*args)
         {
-            handler->SendSysMessage("Usage: .mount setlevel <level>");
+            handler->SendSysMessage("用法: .mount setlevel <等级>");
             handler->SetSentErrorMessage(true);
             return false;
         }
         long level = std::strtol(args, nullptr, 10);
         if (level < 1)
         {
-            handler->SendSysMessage("Level must be >= 1.");
+            handler->SendSysMessage("等级必须 >= 1。");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -188,7 +188,7 @@ namespace
                                     "Mount up first.");
             return true;
         }
-        handler->PSendSysMessage("Set active mount to level {}.",
+        handler->PSendSysMessage("已将当前坐骑设为等级 {}。",
                                  static_cast<uint32>(level));
         return true;
     }

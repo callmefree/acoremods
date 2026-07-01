@@ -426,28 +426,28 @@ void BuyEngine::CmdEnable(ChatHandler *handler, bool enable)
 {
     _cfg.enabled = enable;
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH[BUY]: {}", enable ? "enabled" : "disabled");
+        handler->PSendSysMessage("动态AH[购买]: {}", enable ? "enabled" : "disabled");
 }
 
 void BuyEngine::CmdBudget(ChatHandler *handler, uint32_t gold)
 {
     _cfg.budgetCopper = uint64_t(gold) * 10000ull;
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH[BUY]: budget set to {} gold", gold);
+        handler->PSendSysMessage("动态AH[购买]: 预算设为 {} 金币", gold);
 }
 
 void BuyEngine::CmdMargin(ChatHandler *handler, uint32_t percent)
 {
     _cfg.minMargin = std::max(0u, std::min(percent, 95u)) / 100.0f;
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH[BUY]: min margin set to {}%", percent);
+        handler->PSendSysMessage("动态AH[购买]: 最小利润率设为 {}%", percent);
 }
 
 void BuyEngine::CmdPerItem(ChatHandler *handler, uint32_t cap)
 {
     _cfg.perItemPerCycleCap = std::max<uint32_t>(1u, cap);
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH[BUY]: per-item/cycle cap set to {}", _cfg.perItemPerCycleCap);
+        handler->PSendSysMessage("动态AH[购买]: 每物品/周期上限设为 {}", _cfg.perItemPerCycleCap);
 }
 
 void BuyEngine::CmdOnce(ChatHandler *handler,

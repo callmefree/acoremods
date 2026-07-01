@@ -1268,14 +1268,14 @@ void TerrorZonesMgr::SendTickLineTo(Player* player,
     {
         std::string frag = TierFlavorFragment(slotCopy, _tierCfg, tickAt);
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "|cffff8040The winds shift. {} is empowered — {}, "
-            "{} remaining.|r",
+            "|cffff8040风向转变。{} 已被强化 — {}, "
+            "剩余{}。|r",
             zoneName, frag,
             FormatRemaining(remainingSec));
     }
     else
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "|cffff8040The winds shift. {} is empowered — {} remaining.|r",
+            "|cffff8040风向转变。{} 已被强化 — 剩余{}。|r",
             zoneName, FormatRemaining(remainingSec));
 }
 
@@ -1301,15 +1301,15 @@ void TerrorZonesMgr::SendEntryLineTo(Player* player,
     }
     if (have && slotCopy.flavor != FLAVOR_NONE)
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "|cffff8040You have entered an empowered zone: {} ({} {}). "
-            "{} remaining.|r",
+            "|cffff8040你已进入强化区域：{} ({} {})。"
+            "剩余{}。|r",
             zoneName, TierDisplayName(slotCopy.tier),
             FlavorDisplayName(slotCopy.flavor),
             FormatRemaining(remainingSec));
     else
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "|cffff8040You have entered an empowered zone: {}. "
-            "{} remaining.|r",
+            "|cffff8040你已进入强化区域：{}。"
+            "剩余{}。|r",
             zoneName, FormatRemaining(remainingSec));
 }
 
@@ -1319,7 +1319,7 @@ void TerrorZonesMgr::SendZoneLeaveLineTo(Player* player,
     if (!player || !player->GetSession() || zoneName.empty())
         return;
     ChatHandler(player->GetSession()).PSendSysMessage(
-        "|cffff8040You have left the empowered zone of {}.|r", zoneName);
+        "|cffff8040你已离开强化区域 {}。|r", zoneName);
 }
 
 void TerrorZonesMgr::SendRotationEndLineFor(uint32 zoneId,
@@ -1329,7 +1329,7 @@ void TerrorZonesMgr::SendRotationEndLineFor(uint32 zoneId,
         return;
     char buf[192];
     std::snprintf(buf, sizeof(buf),
-        "|cffff8040The winds settle. %s's empowerment has ended.|r",
+        "|cffff8040风势平息。%s 的强化已结束。|r",
         zoneName.c_str());
     std::string line(buf);
     // Reuse the zone-scoped broadcast machinery, but apply the
@@ -1362,15 +1362,13 @@ void TerrorZonesMgr::SendRotationEndingWarning(uint64 nextTickAt)
     {
         uint32 mins = (leadSec + 30) / 60;
         std::snprintf(buf, sizeof(buf),
-            "|cffff8040In %u minute%s, the winds shift. The current "
-            "empowerments fade.|r",
+            "|cffff8040%u 分钟后风向转变。当前强化效果将消退。|r",
             mins, (mins == 1 ? "" : "s"));
     }
     else
     {
         std::snprintf(buf, sizeof(buf),
-            "|cffff8040In %u seconds, the winds shift. The current "
-            "empowerments fade.|r",
+            "|cffff8040%u 秒后风向转变。当前强化效果将消退。|r",
             leadSec);
     }
     std::string line(buf);
@@ -1394,15 +1392,15 @@ std::string TerrorZonesMgr::FormatRemaining(uint32 secs) const
         uint32 h = secs / 3600;
         uint32 m = (secs % 3600) / 60;
         if (m == 0)
-            return (h == 1) ? "1 hour" : std::to_string(h) + " hours";
-        return std::to_string(h) + "h " + std::to_string(m) + "m";
+            return (h == 1) ? "1 小时" : std::to_string(h) + " 小时";
+        return std::to_string(h) + "时" + std::to_string(m) + "分";
     }
     if (secs >= 60)
     {
         uint32 m = secs / 60;
-        return (m == 1) ? "1 minute" : std::to_string(m) + " minutes";
+        return (m == 1) ? "1 分钟" : std::to_string(m) + " 分钟";
     }
-    return std::to_string(secs) + "s";
+    return std::to_string(secs) + "秒";
 }
 
 uint32 TerrorZonesMgr::RemainingSeconds(uint64 now) const

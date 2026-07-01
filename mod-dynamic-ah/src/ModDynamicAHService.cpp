@@ -344,7 +344,7 @@ void Service::CmdFund(ChatHandler *handler, uint32 gold, std::string const &whic
     else
     {
         if (handler)
-            handler->PSendSysMessage("ModDynamicAH: unknown target '%s' (use: all|a|h|n)", which.c_str());
+            handler->PSendSysMessage("动态AH: 未知目标 %s(使用: all|a|h|n)", which.c_str());
         return;
     }
 
@@ -370,7 +370,7 @@ void Service::CmdFund(ChatHandler *handler, uint32 gold, std::string const &whic
     CharacterDatabase.DirectExecute(sql.c_str());
 
     if (handler)
-        handler->PSendSysMessage("ModDynamicAH: funded {} gold to [{}] (guids: {})",
+        handler->PSendSysMessage("动态AH: 已注入 {} 金币到 [{}](GUID: {})",
                                  gold, which.c_str(), inlist.c_str());
 }
 
@@ -379,7 +379,7 @@ void Service::CmdCapsShow(ChatHandler *handler)
     auto const &c = state_.caps;
     if (!handler)
         return;
-    handler->PSendSysMessage("caps: enabled={} totalPerCycleLimit={}", c.enabled ? "ON" : "OFF", c.totalPerCycleLimit);
+    handler->PSendSysMessage("上限: 启用={} 每周期总限额={}", c.enabled ? "ON" : "OFF", c.totalPerCycleLimit);
     handler->PSendSysMessage("per-house: A={} H={} N={} (planned: A={} H={} N={})",
                              c.perHouseLimit[0], c.perHouseLimit[1], c.perHouseLimit[2],
                              c.perHousePlanned[0], c.perHousePlanned[1], c.perHousePlanned[2]);
@@ -493,7 +493,7 @@ void Service::PlanOnce(ChatHandler *handler)
     };
     buy_.BuildPlan(scarceFn, fairFn, vendorFn);
 
-    handler->PSendSysMessage("ModDynamicAH: Plans built. Posts: {} Buys: {}",
+    handler->PSendSysMessage("动态AH: 计划已构建。上架: {} 购买: {}",
                              state_.postQueue.Size(), buy_.QueueSize());
 }
 
@@ -509,7 +509,7 @@ void Service::ApplyOnce(ChatHandler *handler)
     uint32_t posted = (beforeP > state_.postQueue.Size()) ? (beforeP - state_.postQueue.Size()) : 0u;
     uint32_t buysApplied = (beforeB > buy_.QueueSize()) ? (uint32_t)(beforeB - buy_.QueueSize()) : 0u;
 
-    handler->PSendSysMessage("ModDynamicAH: Applied ({}). Posted={} left={} | Buys~{} left={}",
+    handler->PSendSysMessage("动态AH: 已应用({})。已上架={} 剩余={} | 已购买={} 剩余={}",
                              state_.dryRun ? "dry-run" : "live",
                              posted, state_.postQueue.Size(), buysApplied, buy_.QueueSize());
 }
@@ -518,13 +518,13 @@ void Service::ClearQueues(ChatHandler *handler)
 {
     ModDynamicAH::DynamicAHPosting::ApplyPlanOnWorld(state_, 1000000, handler);
     buy_.Apply(1000000, state_.dryRun, handler);
-    handler->PSendSysMessage("ModDynamicAH: cleared pending (dry={}) posts={} buys={}",
+    handler->PSendSysMessage("动态AH: 已清除待处理(模拟={}) 上架={} 购买={}",
                              state_.dryRun ? 1 : 0, state_.postQueue.Size(), buy_.QueueSize());
 }
 
 void Service::ShowQueue(ChatHandler *handler)
 {
-    handler->PSendSysMessage("ModDynamicAH: postQueue={} buyQueue={} budgetUsed={}/{}",
+    handler->PSendSysMessage("动态AH: 上架队列={} 购买队列={} 预算已用={}/{}",
                              state_.postQueue.Size(), buy_.QueueSize(), buy_.BudgetUsed(), buy_.BudgetLimit());
 }
 
@@ -533,20 +533,20 @@ void Service::ToggleLoop(bool enable, ChatHandler *handler)
     state_.loopEnabled = enable;
     if (enable)
         state_.nextRunMs = (uint64_t)GameTime::GetGameTimeMS().count() + 1000;
-    handler->PSendSysMessage("ModDynamicAH: loop {}", enable ? "enabled" : "disabled");
+    handler->PSendSysMessage("动态AH: 循环已{}", enable ? "enabled" : "disabled");
 }
 
 void Service::SetDryRun(bool dry, ChatHandler *handler)
 {
     state_.dryRun = dry;
-    handler->PSendSysMessage("ModDynamicAH: dryRun = {}", dry ? 1u : 0u);
+    handler->PSendSysMessage("动态AH: 模拟模式 = {}", dry ? 1u : 0u);
 }
 
 void Service::SetInterval(uint32_t minutes, ChatHandler *handler)
 {
     state_.intervalMin = minutes ? minutes : 1;
     state_.nextRunMs = (uint64_t)GameTime::GetGameTimeMS().count() + 1000;
-    handler->PSendSysMessage("ModDynamicAH: interval = {}m", state_.intervalMin);
+    handler->PSendSysMessage("动态AH: 间隔 = {}分钟", state_.intervalMin);
 }
 
 void Service::ShowStatus(ChatHandler *handler)
@@ -566,31 +566,31 @@ void Service::CmdCapsEnable(ChatHandler *handler, bool on)
 {
     state_.caps.enabled = on;
     if (handler)
-        handler->PSendSysMessage("caps: enabled={}", on ? "ON" : "OFF");
-    LOG_INFO("mod_dynamic_ah", "caps: enabled={}", on ? "ON" : "OFF");
+        handler->PSendSysMessage("上限: 已{}", on ? "ON" : "OFF");
+    LOG_INFO("mod_dynamic_ah", "上限: 已{}", on ? "ON" : "OFF");
 }
 
 void Service::CmdCapsReset(ChatHandler *handler)
 {
     state_.caps.ResetCounts();
     if (handler)
-        handler->PSendSysMessage("caps: counts reset");
-    LOG_INFO("mod_dynamic_ah", "caps: counts reset");
+        handler->PSendSysMessage("上限: 计数已重置");
+    LOG_INFO("mod_dynamic_ah", "上限: 计数已重置");
 }
 
 void Service::CmdCapsDefaults(ChatHandler *handler)
 {
     state_.caps.InitDefaults();
     if (handler)
-        handler->PSendSysMessage("caps: defaults restored");
-    LOG_INFO("mod_dynamic_ah", "caps: defaults restored");
+        handler->PSendSysMessage("上限: 默认值已恢复");
+    LOG_INFO("mod_dynamic_ah", "上限: 默认值已恢复");
 }
 
 void Service::CmdCapsSetTotal(ChatHandler *handler, uint32 value)
 {
     state_.caps.totalPerCycleLimit = value;
     if (handler)
-        handler->PSendSysMessage("caps: totalPerCycleLimit={}", value);
+        handler->PSendSysMessage("上限: 每周期总限额={}", value);
     LOG_INFO("mod_dynamic_ah", "caps: set totalPerCycleLimit={}", value);
 }
 
@@ -600,7 +600,7 @@ void Service::CmdCapsSetHouse(ChatHandler *handler, std::string which, uint32 va
     if (idx < 0 || idx > 2)
     {
         if (handler)
-            handler->PSendSysMessage("caps: unknown house '{}', use A|H|N", which.c_str());
+            handler->PSendSysMessage("上限: 未知拍卖行 {}，使用 A|H|N", which.c_str());
         return;
     }
     state_.caps.perHouseLimit[idx] = value;
@@ -615,7 +615,7 @@ void Service::CmdCapsSetFamily(ChatHandler *handler, std::string famName, uint32
     if (!ParseFamilyName(famName, fam))
     {
         if (handler)
-            handler->PSendSysMessage("caps: unknown family '{}'", famName.c_str());
+            handler->PSendSysMessage("上限: 未知类别 {}", famName.c_str());
         return;
     }
     state_.caps.familyLimit[(size_t)fam] = value;
@@ -629,7 +629,7 @@ bool Service::CmdContext(ChatHandler *handler, Optional<std::string> keyOpt, Opt
     // Show current context
     if (!keyOpt)
     {
-        handler->PSendSysMessage("context: enabled={} maxPerBracket={} weightBoost={:.2f} skipVendor={} debug={}",
+        handler->PSendSysMessage("上下文: 启用={} 每区间上限={} 权重加成={:.2f} 跳过商贩={} 调试={}",
                                  state_.contextEnabled ? "ON" : "OFF",
                                  state_.contextMaxPerBracket,
                                  double(state_.contextWeightBoost),

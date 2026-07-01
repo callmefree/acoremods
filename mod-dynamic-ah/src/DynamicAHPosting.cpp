@@ -48,7 +48,7 @@ namespace ModDynamicAH
         if (!item)
         {
             if (handler)
-                handler->PSendSysMessage("ModDynamicAH: could not create item {}", itemId);
+                handler->PSendSysMessage("动态AH: 无法创建物品 {}", itemId);
             return false;
         }
         item->SetOwnerGUID(owner);
@@ -58,7 +58,7 @@ namespace ModDynamicAH
         if (!ahEntry)
         {
             if (handler)
-                handler->PSendSysMessage("ModDynamicAH: invalid auction house entry");
+                handler->PSendSysMessage("动态AH: 无效的拍卖行条目");
             delete item;
             return false;
         }
@@ -118,7 +118,7 @@ namespace ModDynamicAH
         if (s.dryRun)
         {
             if (handler)
-                handler->PSendSysMessage("ModDynamicAH (dry-run): would post {} auctions.", uint32(batch.size()));
+                handler->PSendSysMessage("动态AH（模拟）: 将发布 {} 个拍卖。", uint32(batch.size()));
             return;
         }
 
@@ -134,7 +134,7 @@ namespace ModDynamicAH
         CharacterDatabase.CommitTransaction(trans);
 
         if (handler)
-            handler->PSendSysMessage("ModDynamicAH: posted {}/{} auctions in a single DB commit.",
+            handler->PSendSysMessage("动态AH: 在单次数据库提交中发布了 {}/{} 个拍卖。",
                                      posted, uint32(batch.size()));
     }
 } // namespace ModDynamicAH

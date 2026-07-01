@@ -235,20 +235,20 @@ private:
             case Branch::WithHook:
                 textId = TEXT_WITH_HOOK;
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "Allison sent me.",
+                                 "是艾莉森让我来的。",
                                  GOSSIP_SENDER_MAIN, ACTION_NAME_ALLISON);
                 break;
 
             case Branch::Story:
                 textId = TEXT_STORY;
                 AddGossipItemFor(player, GOSSIP_ICON_MONEY_BAG,
-                                 "I'll cover the fifty gold.",
+                                 "这50金币我来出。",
                                  GOSSIP_SENDER_MAIN, ACTION_PAY_DEBT);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "I should speak with Allison first.",
+                                 "我得先跟艾莉森谈谈。",
                                  GOSSIP_SENDER_MAIN, ACTION_TELL_ALLISON);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT,
-                                 "[Walk away.]",
+                                 "[转身离开。]",
                                  GOSSIP_SENDER_MAIN, ACTION_WALK_AWAY);
                 break;
 

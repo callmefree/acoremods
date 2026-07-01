@@ -72,7 +72,7 @@ public:
         // menu (rest/bind, vendor, etc.) and sends it once every module has
         // appended. We only add our option - no Prepare/Send here, so we
         // coexist with other modules (e.g. mod-terror-zones) on the same NPC.
-        AddGossipItemFor(player, GOSSIP_ICON_TABARD, "Organize my bags", SENDER_BAGSORT, ACTION_OPEN);
+        AddGossipItemFor(player, GOSSIP_ICON_TABARD, "整理我的背包", SENDER_BAGSORT, ACTION_OPEN);
         return true; // we appended an item
     }
 
@@ -85,11 +85,11 @@ public:
         {
             case ACTION_OPEN:
                 ClearGossipMenuFor(player);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By type, then quality", SENDER_BAGSORT, ACTION_SORT_TYPE);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By quality", SENDER_BAGSORT, ACTION_SORT_QUALITY);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By item level", SENDER_BAGSORT, ACTION_SORT_ILVL);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "By name (A-Z)", SENDER_BAGSORT, ACTION_SORT_NAME);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Type & quality, quest items to last bag",
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "按类型和品质", SENDER_BAGSORT, ACTION_SORT_TYPE);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "按品质", SENDER_BAGSORT, ACTION_SORT_QUALITY);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "按物品等级", SENDER_BAGSORT, ACTION_SORT_ILVL);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "按名称（A-Z）", SENDER_BAGSORT, ACTION_SORT_NAME);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "按类型品质，任务物品放最后",
                     SENDER_BAGSORT, ACTION_SORT_QUEST);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nevermind", SENDER_BAGSORT, ACTION_CANCEL);
                 SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());

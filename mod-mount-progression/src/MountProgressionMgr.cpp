@@ -626,12 +626,12 @@ void MountProgressionMgr::AnnounceActiveMount(Player* player,
     ChatHandler ch(player->GetSession());
     if (need == 0)
         ch.PSendSysMessage(
-            "|cff40ff80[Mount]|r Active: |cffffd100{}|r ({} {}) - lvl {} (max) - XP: {}",
+            "|cff40ff80[坐骑]|r 当前：|cffffd100{}|r（{} {}）- 等级 {}（满级）- 经验来源：{}",
             entry->displayName, RarityName(entry->rarity),
             TypeName(entry->type), level, XPSourceName(entry->type));
     else
         ch.PSendSysMessage(
-            "|cff40ff80[Mount]|r Active: |cffffd100{}|r ({} {}) - lvl {}, xp {}/{} - XP: {}",
+            "|cff40ff80[坐骑]|r 当前：|cffffd100{}|r（{} {}）- 等级 {}，经验 {}/{} - 经验来源：{}",
             entry->displayName, RarityName(entry->rarity),
             TypeName(entry->type), level, xp, need, XPSourceName(entry->type));
 }
@@ -668,7 +668,7 @@ void MountProgressionMgr::AwardXP(Player* player, MountProgress* mp, uint32 amou
     if (leveledUpTo && player->GetSession())
     {
         ChatHandler(player->GetSession()).PSendSysMessage(
-            "|cff40ff40Your {} reached mount level {}!|r",
+            "|cff40ff40你的 {} 达到了坐骑等级 {}！|r",
             entry->displayName, leveledUpTo);
     }
 

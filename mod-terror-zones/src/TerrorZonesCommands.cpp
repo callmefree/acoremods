@@ -22,15 +22,15 @@ namespace
     std::string RelativeAge(uint64 tickAt, uint64 now)
     {
         if (tickAt > now)
-            return "just now";
+            return "刚刚";
         uint64 delta = now - tickAt;
         if (delta < 60)
-            return std::to_string(delta) + "s ago";
+            return std::to_string(delta) + "秒前";
         if (delta < 3600)
-            return std::to_string(delta / 60) + "m ago";
+            return std::to_string(delta / 60) + "分前";
         if (delta < 86400)
-            return std::to_string(delta / 3600) + "h ago";
-        return std::to_string(delta / 86400) + "d ago";
+            return std::to_string(delta / 3600) + "时前";
+        return std::to_string(delta / 86400) + "天前";
     }
 
     std::string FormatEventRemaining(uint64 now, uint64 startsAt, uint64 endsAt)
@@ -39,15 +39,15 @@ namespace
         {
             uint64 delta = startsAt - now;
             if (delta < 60)
-                return "fires in " + std::to_string(delta) + "s";
-            return "fires in " + std::to_string(delta / 60) + "m";
+                return "将在" + std::to_string(delta) + "秒后触发";
+            return "将在" + std::to_string(delta / 60) + "分后触发";
         }
         if (now >= endsAt)
-            return "expired";
+            return "已过期";
         uint64 delta = endsAt - now;
         if (delta < 60)
-            return std::to_string(delta) + "s remaining";
-        return std::to_string(delta / 60) + "m remaining";
+            return "剩余" + std::to_string(delta) + "秒";
+        return "剩余" + std::to_string(delta / 60) + "分";
     }
 
     std::string FormatRemaining(uint32 secs)
@@ -57,15 +57,15 @@ namespace
             uint32 h = secs / 3600;
             uint32 m = (secs % 3600) / 60;
             if (m == 0)
-                return (h == 1) ? "1 hour" : std::to_string(h) + " hours";
-            return std::to_string(h) + "h " + std::to_string(m) + "m";
+                return (h == 1) ? "1 小时" : std::to_string(h) + " 小时";
+            return std::to_string(h) + "时" + std::to_string(m) + "分";
         }
         if (secs >= 60)
         {
             uint32 m = secs / 60;
-            return (m == 1) ? "1 minute" : std::to_string(m) + " minutes";
+            return (m == 1) ? "1 分钟" : std::to_string(m) + " 分钟";
         }
-        return std::to_string(secs) + "s";
+        return std::to_string(secs) + "秒";
     }
 
     std::string FormatAxisLine(RewardAxis axis, float value,
@@ -104,24 +104,24 @@ namespace
         auto& mgr = TerrorZonesMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Terror Zones is disabled.");
+            handler->SendSysMessage("恐怖地带功能已禁用。");
             return true;
         }
 
         ActiveRotation rot = mgr.GetActiveRotation();
         if (rot.slots.empty())
         {
-            handler->SendSysMessage("No empowered zone yet. Wait for the next rotation.");
+            handler->SendSysMessage("尚无强化区域。请等待下一轮轮换。");
             return true;
         }
 
         uint32 remaining = mgr.RemainingSeconds();
         handler->PSendSysMessage(
-            "|cffff8040Empowered zone(s)|r ({} slot(s), {} remaining):",
+            "|cffff8040强化区域|r（{}个槽位，剩余{}）：",
             static_cast<uint32>(rot.slots.size()), FormatRemaining(remaining));
         for (ActiveSlot const& s : rot.slots)
         {
-            handler->PSendSysMessage("  |cffffd100{}|r — {} {} (zone {})",
+            handler->PSendSysMessage("  |cffffd100{}|r — {} {}（区域 {}）",
                                      s.displayName,
                                      TierDisplayName(s.tier),
                                      FlavorDisplayName(s.flavor),
@@ -195,7 +195,7 @@ namespace
                     if (!header)
                     {
                         handler->PSendSysMessage(
-                            "    Active events ({}):", s.displayName);
+                            "    活跃事件（{}）：", s.displayName);
                         header = true;
                     }
                     // Slice 8 — event-boss HP mult shown inline so GMs
@@ -209,7 +209,7 @@ namespace
                         handler->PSendSysMessage(
                             "      * {}: {} — {} (HP x{:.2f})",
                             EventTypeDisplayName(e.type),
-                            e.displayName.empty() ? "(unnamed)" : e.displayName,
+                            e.displayName.empty() ? "（未命名）" : e.displayName,
                             FormatEventRemaining(now, e.startsAt, e.endsAt),
                             hpMult);
                     }
@@ -218,7 +218,7 @@ namespace
                         handler->PSendSysMessage(
                             "      * {}: {} — {}",
                             EventTypeDisplayName(e.type),
-                            e.displayName.empty() ? "(unnamed)" : e.displayName,
+                            e.displayName.empty() ? "（未命名）" : e.displayName,
                             FormatEventRemaining(now, e.startsAt, e.endsAt));
                     }
                 }
@@ -232,14 +232,14 @@ namespace
         auto& mgr = TerrorZonesMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Terror Zones is disabled.");
+            handler->SendSysMessage("恐怖地带功能已禁用。");
             return true;
         }
         uint64 next = mgr.GetNextTickAt();
         uint64 now = static_cast<uint64>(::time(nullptr));
         if (next <= now)
         {
-            handler->SendSysMessage("Next rotation is imminent.");
+            handler->SendSysMessage("下次轮换即将开始。");
             return true;
         }
         uint32 delta = static_cast<uint32>(next - now);
@@ -252,7 +252,7 @@ namespace
 #endif
         char buf[32];
         std::strftime(buf, sizeof(buf), "%H:%M", &local);
-        handler->PSendSysMessage("Next rotation at {} server time ({}).",
+        handler->PSendSysMessage("下次轮换在服务器时间 {}（{}后）。",
                                  buf, FormatRemaining(delta));
         return true;
     }
@@ -262,18 +262,18 @@ namespace
         auto& mgr = TerrorZonesMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Terror Zones is disabled.");
+            handler->SendSysMessage("恐怖地带功能已禁用。");
             return true;
         }
         std::vector<HistoryTick> hist = mgr.GetHistory(6);
         if (hist.empty())
         {
-            handler->SendSysMessage("No rotation history yet.");
+            handler->SendSysMessage("暂无轮换记录。");
             return true;
         }
 
         uint64 now = static_cast<uint64>(::time(nullptr));
-        handler->PSendSysMessage("Last {} rotation(s):",
+        handler->PSendSysMessage("最近 {} 次轮换：",
                                  static_cast<uint32>(hist.size()));
         for (HistoryTick const& h : hist)
         {
@@ -329,7 +329,7 @@ namespace
             uint8 player_mask = mgr.GetAnnounceCategories(player);
             uint8 global_mask = mgr.GetGlobalAnnounceCategoryMask();
             handler->PSendSysMessage(
-                "Terror Zones announcements: master = {}.",
+                "恐怖地带公告：总开关 = {}。",
                 master ? "ON" : "OFF");
             for (uint8 i = 0; i < ANNOUNCE_CATEGORY_COUNT; ++i)
             {
@@ -338,19 +338,18 @@ namespace
                 bool g = (global_mask & bit) != 0;
                 bool p = (player_mask & bit) != 0;
                 handler->PSendSysMessage(
-                    "  {} ({}): server={} you={}",
+                    "  {}（{}）：服务器={} 你={}",
                     AnnounceCategoryDisplayName(cat),
                     AnnounceCategoryCommandKey(cat),
                     g ? "on" : "off",
                     p ? "on" : "off");
             }
             handler->SendSysMessage(
-                "Use .zones announce on|off — master toggle.");
+                "使用 .zones announce on|off — 总开关。");
             handler->SendSysMessage(
-                "Use .zones announce <cat> on|off — per-category. "
-                "Aliases: all, event, rotation-all, zone.");
+                "使用 .zones announce <类别> on|off — 按类别。别名：all(全部), event(事件), rotation-all(轮换), zone(区域)。");
             handler->SendSysMessage(
-                "Use .zones announce reset — restore defaults.");
+                "使用 .zones announce reset — 恢复默认。");
         }
     }
 
@@ -388,7 +387,7 @@ namespace
             {
                 mgr.SetAnnounceEnabled(player, on);
                 handler->PSendSysMessage(
-                    "Terror Zones announcements {} (master).",
+                    "恐怖地带公告已{}（总开关）。",
                     on ? "ON" : "OFF");
                 return true;
             }
@@ -409,7 +408,7 @@ namespace
             if (!ParseOnOff(tokens[1], on))
             {
                 handler->SendSysMessage(
-                    "Second arg must be 'on' or 'off'.");
+                    "第二个参数必须为 'on' 或 'off'。");
                 handler->SetSentErrorMessage(true);
                 return false;
             }
@@ -421,7 +420,7 @@ namespace
                 if (cat == ANNOUNCE_CATEGORY_COUNT)
                 {
                     handler->PSendSysMessage(
-                        "Unknown category '{}'. Use one of: ",
+                        "未知类别 '{}'。请使用以下之一：",
                         tokens[0]);
                     for (uint8 i = 0; i < ANNOUNCE_CATEGORY_COUNT; ++i)
                         handler->PSendSysMessage("  {}",
@@ -439,7 +438,7 @@ namespace
                 mask &= static_cast<uint8>(~bits);
             mgr.SetAnnounceCategories(player, mask);
             handler->PSendSysMessage(
-                "Terror Zones announcements: {} categories now {}.",
+                "恐怖地带公告：{} 类别现在已{}。",
                 tokens[0], on ? "ON" : "OFF");
             return true;
         }
@@ -456,11 +455,11 @@ namespace
         auto& mgr = TerrorZonesMgr::Instance();
         if (!mgr.IsEnabled())
         {
-            handler->SendSysMessage("Terror Zones is disabled.");
+            handler->SendSysMessage("恐怖地带功能已禁用。");
             return true;
         }
         mgr.ForceTick();
-        handler->SendSysMessage("Forced a Terror Zones rotation tick.");
+        handler->SendSysMessage("已强制触发一次恐怖地带轮换。");
         return true;
     }
 
@@ -487,23 +486,23 @@ namespace
         if (!args || !*args)
         {
             handler->SendSysMessage(
-                "Usage: .zones testweather <state> <grade>  "
-                "(state: 0=FINE, 1=FOG, 3-5=rain, 6-8=snow, 22/41/42=sandstorm, "
-                "86=THUNDERS, 90=BLACKRAIN; grade 0.0-1.0)");
+                "用法: .zones testweather <状态> <强度>  "
+                "(状态: 0=晴朗 1=雾 3-5=雨 6-8=雪 22/41/42=沙暴 "
+                "86=雷暴 90=黑雨; 强度 0.0-1.0)");
             return true;
         }
         int state = 0;
         float grade = 0.0f;
         if (std::sscanf(args, "%d %f", &state, &grade) != 2)
         {
-            handler->SendSysMessage("Bad args. Example: .zones testweather 90 0.75");
+            handler->SendSysMessage("参数错误。示例: .zones testweather 90 0.75");
             handler->SetSentErrorMessage(true);
             return false;
         }
         TerrorZonesMgr::Instance().TestApplyWeather(
             player, static_cast<uint32>(state), grade);
         handler->PSendSysMessage(
-            "Applied weather state={} grade={:.2f} to your current zone.",
+            "已将天气状态={} 强度={:.2f} 应用到当前区域。",
             state, grade);
         return true;
     }
@@ -521,19 +520,19 @@ namespace
         if (arg.empty())
         {
             handler->SendSysMessage(
-                "Usage: .zones testflavor bloodbath|prospectors|warlords|arcane|merchants");
+                "用法: .zones testflavor bloodbath|prospectors|warlords|arcane|merchants");
             return true;
         }
         Flavor flavor = ParseFlavorKey(arg);
         if (flavor == FLAVOR_NONE)
         {
-            handler->PSendSysMessage("Unknown flavor '{}'.", arg);
+            handler->PSendSysMessage("未知属性类型 '{}'。", arg);
             handler->SetSentErrorMessage(true);
             return false;
         }
         TerrorZonesMgr::Instance().TestApplyFlavor(player, flavor);
         handler->PSendSysMessage(
-            "Applied configured {} atmosphere to your current zone.",
+            "已将配置的 {} 氛围应用到当前区域。",
             FlavorDisplayName(flavor));
         return true;
     }
@@ -548,20 +547,20 @@ namespace
         if (arg.empty())
         {
             handler->SendSysMessage(
-                "Usage: .zones setflavor bloodbath|prospectors|warlords|arcane|merchants");
+                "用法: .zones setflavor bloodbath|prospectors|warlords|arcane|merchants");
             return true;
         }
         Flavor flavor = ParseFlavorKey(arg);
         if (flavor == FLAVOR_NONE)
         {
-            handler->PSendSysMessage("Unknown flavor '{}'.", arg);
+            handler->PSendSysMessage("未知属性类型 '{}'。", arg);
             handler->SetSentErrorMessage(true);
             return false;
         }
         if (!TerrorZonesMgr::Instance().SetActiveFlavor(flavor))
         {
             handler->SendSysMessage(
-                "No active rotation to retag. Run .zones tick first.");
+                "没有活跃的轮换可重新标记。请先运行 .zones tick。");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -578,7 +577,7 @@ namespace
         if (!player)
             return false;
         TerrorZonesMgr::Instance().TestClearAtmosphere(player);
-        handler->SendSysMessage("Cleared weather override on your current zone.");
+        handler->SendSysMessage("已清除当前区域的天气覆盖。");
         return true;
     }
 
@@ -591,13 +590,13 @@ namespace
             arg.pop_back();
         if (arg.empty())
         {
-            handler->SendSysMessage("Usage: .zones settier <1-5>");
+            handler->SendSysMessage("用法: .zones settier <1-5>");
             return true;
         }
         long n = std::strtol(arg.c_str(), nullptr, 10);
         if (n < 1 || n > static_cast<long>(TIER_MAX))
         {
-            handler->PSendSysMessage("Tier must be 1-{}.",
+            handler->PSendSysMessage("阶位必须在 1-{} 之间。",
                                      static_cast<uint32>(TIER_MAX));
             handler->SetSentErrorMessage(true);
             return false;
@@ -606,7 +605,7 @@ namespace
         if (!TerrorZonesMgr::Instance().SetActiveTier(tier))
         {
             handler->SendSysMessage(
-                "No active rotation to retier. Run .zones tick first.");
+                "没有活跃的轮换可重新设阶。请先运行 .zones tick。");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -623,11 +622,11 @@ namespace
         std::vector<ActiveEvent> evts = mgr.GetEventsSnapshot();
         if (evts.empty())
         {
-            handler->SendSysMessage("No active or scheduled events.");
+            handler->SendSysMessage("没有活跃或计划中的事件。");
             return true;
         }
         uint64 now = static_cast<uint64>(::time(nullptr));
-        handler->PSendSysMessage("Active + scheduled events ({}):",
+        handler->PSendSysMessage("活跃和计划中的事件（{}）：",
                                  static_cast<uint32>(evts.size()));
         for (ActiveEvent const& e : evts)
         {
@@ -635,7 +634,7 @@ namespace
                 "  [{}] zone={} / {}: {} — {}",
                 EventStateDisplayName(e.state), e.zoneId,
                 EventTypeDisplayName(e.type),
-                e.displayName.empty() ? "(unnamed)" : e.displayName,
+                e.displayName.empty() ? "（未命名）" : e.displayName,
                 FormatEventRemaining(now, e.startsAt, e.endsAt));
         }
         return true;
@@ -654,20 +653,20 @@ namespace
         if (arg.empty())
         {
             handler->SendSysMessage(
-                "Usage: .zones event fire worldboss|nodes");
+                "用法: .zones event fire worldboss|nodes");
             return true;
         }
         EventType type = ParseEventTypeKey(arg.c_str());
         if (type == EVENT_NONE)
         {
-            handler->PSendSysMessage("Unknown event type '{}'.", arg);
+            handler->PSendSysMessage("未知事件类型 '{}'。", arg);
             handler->SetSentErrorMessage(true);
             return false;
         }
         if (type == EVENT_TREASURE_CARAVAN || type == EVENT_CHAMPION_GROUNDS)
         {
             handler->PSendSysMessage(
-                "Event type '{}' is deferred to Slice 6b — not implemented.",
+                "事件类型 '{}' 已推迟到 Slice 6b — 尚未实现。",
                 arg);
             handler->SetSentErrorMessage(true);
             return false;
@@ -686,7 +685,7 @@ namespace
             return false;
         }
         handler->PSendSysMessage(
-            "Fired {} event (id {}) in zone {}.",
+            "已触发 {} 事件 ID {}（区域 {}）。",
             EventTypeDisplayName(type), id, gm->GetZoneId());
         return true;
     }
@@ -700,10 +699,10 @@ namespace
         uint32 n = TerrorZonesMgr::Instance().EndActiveEventsInZone(zoneId);
         if (n == 0)
             handler->PSendSysMessage(
-                "No active or pending events in zone {}.", zoneId);
+                "区域 {} 没有活跃或待处理的事件。", zoneId);
         else
             handler->PSendSysMessage(
-                "Ended {} event(s) in zone {}.", n, zoneId);
+                "已结束 {} 个事件（区域 {}）。", n, zoneId);
         return true;
     }
 
@@ -712,16 +711,16 @@ namespace
         std::vector<PoolEntry> pool = TerrorZonesMgr::Instance().GetPool();
         if (pool.empty())
         {
-            handler->SendSysMessage("Zone pool is empty.");
+            handler->SendSysMessage("区域池为空。");
             return true;
         }
-        handler->PSendSysMessage("Zone pool ({} entries):",
+        handler->PSendSysMessage("区域池（{}个条目）：",
                                  static_cast<uint32>(pool.size()));
         for (PoolEntry const& e : pool)
             handler->PSendSysMessage("  [{}] {} lvl {}-{} {}",
                                      e.zoneId, e.displayName,
                                      e.levelMin, e.levelMax,
-                                     e.enabled ? "" : "(disabled)");
+                                     e.enabled ? "" : "(已禁用)");
         return true;
     }
 
